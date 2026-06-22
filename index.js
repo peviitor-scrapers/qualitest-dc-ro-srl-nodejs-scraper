@@ -60,15 +60,15 @@ async function fetchWorkableJobsPage(page) {
     department: [],
     location: [],
     workplace: [],
-    worktype: [],
-    page: page,
-    pageSize: 50
+    worktype: []
   };
   const res = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "Accept": "application/json",
+      "Referer": "https://apply.workable.com/qualitest-1/",
+      "Origin": "https://apply.workable.com",
       "User-Agent": "job_seeker_ro_spider"
     },
     body: JSON.stringify(body)
@@ -107,55 +107,17 @@ function parseWorkableJobs(apiData) {
 }
 
 async function scrapeAllListings(testOnlyOnePage = false) {
-  const allJobs = [];
+  console.log("Fetching Workable jobs...");
+  const data = await fetchWorkableJobsPage(1);
+  const { jobs } = parseWorkableJobs(data);
   const seenUrls = new Set();
-  let page = 1;
-  let totalJobs = 0;
-  const MAX_PAGES = 10;
+  const allJobs = [];
 
-  while (true) {
-    console.log(`Fetching Workable page: ${page}`);
-    const data = await fetchWorkableJobsPage(page);
-    const result = parseWorkableJobs(data);
-    const jobs = result.jobs;
-
-    if (!jobs.length) {
-      console.log(`No jobs found on page ${page}, stopping.`);
-      break;
+  for (const job of jobs) {
+    if (!seenUrls.has(job.url)) {
+      seenUrls.add(job.url);
+      allJobs.push(job);
     }
-
-    if (page === 1) {
-      totalJobs = result.total;
-      console.log(`Total jobs on site: ${totalJobs}`);
-    }
-
-    let newJobs = 0;
-    for (const job of jobs) {
-      if (!seenUrls.has(job.url)) {
-        seenUrls.add(job.url);
-        allJobs.push(job);
-        newJobs++;
-      }
-    }
-    console.log(`Page ${page}: ${jobs.length} jobs, ${newJobs} new (total: ${allJobs.length})`);
-
-    if (testOnlyOnePage) {
-      console.log("Test mode: stopping after page 1.");
-      break;
-    }
-
-    if (page >= MAX_PAGES) {
-      console.log(`Max pages (${MAX_PAGES}) reached, stopping.`);
-      break;
-    }
-
-    if (newJobs === 0) {
-      console.log(`No new jobs on page ${page}, stopping.`);
-      break;
-    }
-
-    page += 1;
-    await sleep(1000);
   }
 
   console.log(`Total unique jobs collected: ${allJobs.length}`);
