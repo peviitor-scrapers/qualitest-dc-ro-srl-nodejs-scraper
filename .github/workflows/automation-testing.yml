@@ -23,6 +23,8 @@ jobs:
     
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       
       - name: Setup Node.js
         uses: actions/setup-node@v5
@@ -52,6 +54,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Ensure company exists in company core
         env:
@@ -116,6 +120,8 @@ jobs:
     
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
         
       - name: Setup Node.js
         uses: actions/setup-node@v5
