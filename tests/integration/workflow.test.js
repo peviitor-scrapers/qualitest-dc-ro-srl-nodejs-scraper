@@ -1,5 +1,5 @@
 import { jest } from '@jest/globals';
-import { readFileSync, existsSync, writeFileSync, mkdirSync, rmSync } from 'fs';
+import { readFileSync, existsSync, writeFileSync, mkdirSync, rmSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -56,10 +56,10 @@ function setupIntegrationData() {
     'utf-8'
   );
 
-  const workflowFiles = [
-    join(REPO_ROOT, '.github', 'workflows', 'job-seeker-ro-spider.yml'),
-    join(REPO_ROOT, '.github', 'workflows', 'deploy-pages.yml')
-  ];
+  const workflowsDir = join(REPO_ROOT, '.github', 'workflows');
+  const workflowFiles = existsSync(workflowsDir)
+    ? readdirSync(workflowsDir).filter(f => f.endsWith('.yml')).map(f => join(workflowsDir, f))
+    : [];
 
   const workflowStatuses = workflowFiles.reduce((acc, f) => {
     acc[f] = existsSync(f);

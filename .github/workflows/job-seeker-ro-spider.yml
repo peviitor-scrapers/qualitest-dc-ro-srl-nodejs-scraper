@@ -26,6 +26,9 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Create test-results directory
+        run: mkdir -p docs/test-results
+
       - name: Pre-scrape — Unit Tests
         run: |
           npm run test:unit
