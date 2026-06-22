@@ -1,19 +1,19 @@
 {
-  "validatedAt": "2026-04-13T11:09:40.321Z",
+  "validatedAt": "2026-06-22T10:00:00.000Z",
   "source": "ANAF",
-  "brand": "EPAM",
+  "brand": "Qualitest",
   "anaf": {
-    "cui": 33159615,
-    "name": "EPAM SYSTEMS INTERNATIONAL SRL",
-    "address": "MUNICIPIUL BUCUREŞTI, SECTOR 1, BLD IANCU DE HUNEDOARA, NR.48, ET.9",
-    "registrationNumber": "J2014005735405",
+    "cui": 39814543,
+    "name": "QUALITEST DC RO S.R.L.",
+    "address": "MUNICIPIUL BUCUREŞTI, SECTOR 2, GARA HERĂSTRĂU, NR.6, ET.1",
+    "registrationNumber": "J40/8760/2010",
     "phone": "",
     "fax": "",
-    "postalCode": "11745",
-    "caenCode": "6220",
+    "postalCode": "020334",
+    "caenCode": "6210",
     "iban": "",
-    "registrationState": "TRANSFER(SOSIRE) din data 20.04.2022",
-    "registrationDate": "2014-05-14",
+    "registrationState": "",
+    "registrationDate": "2010-05-06",
     "fiscalAuthority": "Direcţia Generală a Finanţelor Publice Municipiul Bucureşti",
     "ownershipForm": "PROPR.PRIVATA-CAPITAL PRIVAT STRAIN",
     "organizationForm": "PERSOANA JURIDICA",
@@ -21,7 +21,7 @@
     "vatRegistered": true,
     "vatPeriods": [
       {
-        "start": "2020-07-24",
+        "start": "2010-05-06",
         "end": null,
         "yearStart": "",
         "message": ""
@@ -31,17 +31,17 @@
     "cashBasisVatStart": null,
     "cashBasisVatEnd": null,
     "inactive": false,
-    "inactiveSince": "2018-12-27",
-    "reactivatedSince": "2020-05-13",
+    "inactiveSince": null,
+    "reactivatedSince": null,
     "splitVat": false,
     "eFacturaRegistered": false,
     "headquartersAddress": {
-      "street": "Bld. Iancu de Hunedoara",
-      "number": "48",
-      "locality": "Sector 1 Mun. Bucureşti",
+      "street": "Gara Herăstrău",
+      "number": "6",
+      "locality": "Sector 2 Mun. Bucureşti",
       "county": "MUNICIPIUL BUCUREŞTI",
       "country": "",
-      "postalCode": "11745"
+      "postalCode": "020334"
     },
     "fiscalAddress": {
       "street": "",
@@ -53,46 +53,46 @@
     },
     "administrators": [
       {
-        "name": "JASON PETERSON",
+        "name": "SHAI LIBERMAN",
         "role": "administrator"
       }
     ],
     "authorizedCaenCodes": [
       "6210",
-      "6220",
-      "6290",
-      "7020",
-      "8559"
+      "6201",
+      "6202",
+      "6209",
+      "7022"
     ],
     "onrcStatus": 1048,
     "onrcStatusLabel": "Funcțiune"
   },
   "peviitor": {
-    "id": "33159615",
-    "company": "EPAM SYSTEMS INTERNATIONAL SRL",
-    "brand": "EPAM",
-    "group": "EPAM Systems",
+    "id": "39814543",
+    "company": "QUALITEST DC RO S.R.L.",
+    "brand": "Qualitest",
+    "group": "Qualitest",
     "status": "activ",
     "website": [
-      "https://www.epam.com"
+      "https://www.qualitestgroup.com"
     ],
     "career": [
-      "https://www.epam.com/careers/locations/romania"
+      "https://apply.workable.com/qualitest-1/"
     ],
-    "lastScraped": "2026-04-12",
-    "scraperFile": "epam.md",
-    "_version_": 1862291263324160000,
-    "_root_": "33159615"
+    "lastScraped": "2026-06-22",
+    "scraperFile": "qualitest-dc-ro-srl-nodejs-scraper.md",
+    "_version_": 1,
+    "_root_": "39814543"
   },
   "summary": {
-    "company": "EPAM SYSTEMS INTERNATIONAL SRL",
-    "cif": "33159615",
+    "company": "QUALITEST DC RO S.R.L.",
+    "cif": "39814543",
     "active": true,
-    "inactiveSince": "2018-12-27",
-    "reactivatedSince": "2020-05-13",
-    "address": "MUNICIPIUL BUCUREŞTI, SECTOR 1, BLD IANCU DE HUNEDOARA, NR.48, ET.9",
-    "registrationNumber": "J2014005735405",
-    "caenCode": "6220",
+    "inactiveSince": null,
+    "reactivatedSince": null,
+    "address": "MUNICIPIUL BUCUREŞTI, SECTOR 2, GARA HERĂSTRĂU, NR.6, ET.1",
+    "registrationNumber": "J40/8760/2010",
+    "caenCode": "6210",
     "vatRegistered": true,
     "eFacturaRegistered": false
   }

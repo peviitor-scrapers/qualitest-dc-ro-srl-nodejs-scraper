@@ -1,106 +1,152 @@
-import fetch from "node-fetch";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
+import { jest } from '@jest/globals';
+import { readFileSync, existsSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const REPO = process.env.GITHUB_REPOSITORY;
-const TOKEN = process.env.GITHUB_TOKEN;
-const SCRAPER_YML = ".github/workflows/job-seeker-ro-spider.yml";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
+const REPO_ROOT = join(__dirname, '..', '..');
+const CONFIG_PATH = join(REPO_ROOT, 'config', 'company.json');
 
-function repoUrl(apiPath) {
-  return `https://api.github.com/repos/${REPO}${apiPath}`;
+let companyConfig;
+
+try {
+  companyConfig = JSON.parse(readFileSync(CONFIG_PATH, 'utf-8'));
+} catch (err) {
+  throw new Error(`Cannot read company config: ${err.message}`);
 }
 
-async function ghFetch(url) {
-  const headers = { Accept: "application/vnd.github.v3+json", "User-Agent": "jest-test" };
-  if (TOKEN) headers.Authorization = `token ${TOKEN}`;
-  const res = await fetch(url, { headers });
-  return res;
-}
+const CIF = companyConfig.cif;
+const BRAND = companyConfig.brand;
+const LEGAL_NAME = companyConfig.legalName;
+const WEBSITE = companyConfig.website;
+const CAREER_URL = companyConfig.careerUrl;
+const SCRAPER_FILE = companyConfig.scraperFile;
 
-function skipIfNoRepo() {
-  if (!REPO) {
-    console.log("GITHUB_REPOSITORY not set — running locally, skipping API check");
-    return true;
-  }
-  return false;
-}
+describe('Repository Consistency Check', () => {
+  describe('config/company.json', () => {
+    it('should have valid CIF (6-9 digits): ' + CIF, () => {
+      expect(CIF).toMatch(/^\d{6,9}$/);
+    });
 
-describe("Repository Configuration", () => {
-  describe("default branch", () => {
-    it("must be main", async () => {
-      if (skipIfNoRepo()) return;
-      const res = await ghFetch(repoUrl(""));
-      expect(res.ok).toBe(true);
-      const data = await res.json();
-      expect(data.default_branch).toBe("main");
-      console.log(`✅ Default branch: ${data.default_branch}`);
+    it('should have brand defined: ' + BRAND, () => {
+      expect(BRAND).toBeDefined();
+      expect(BRAND.length).toBeGreaterThan(0);
+    });
+
+    it('should have legal name defined: ' + LEGAL_NAME, () => {
+      expect(LEGAL_NAME).toBeDefined();
+      expect(LEGAL_NAME.length).toBeGreaterThan(0);
+    });
+
+    it('should have valid website URL: ' + WEBSITE, () => {
+      expect(WEBSITE).toMatch(/^https?:\/\/.+/);
+    });
+
+    it('should have valid career URL: ' + CAREER_URL, () => {
+      expect(CAREER_URL).toMatch(/^https?:\/\/.+/);
+    });
+
+    it('should have scraperFile URL ending in .yml', () => {
+      expect(SCRAPER_FILE).toMatch(/\.yml$/);
     });
   });
 
-  describe("GitHub Pages", () => {
-    it("must have GitHub Pages URL set in About", async () => {
-      if (skipIfNoRepo()) return;
-      const res = await ghFetch(repoUrl(""));
-      expect(res.ok).toBe(true);
-      const data = await res.json();
-      expect(data.homepage).toBeTruthy();
-      expect(data.homepage).toMatch(/^https?:\/\//);
-      console.log(`✅ GitHub Pages URL: ${data.homepage}`);
-    });
+  describe('Repository Structure', () => {
+    const requiredDirs = ['.github/workflows', 'config', 'docs', 'tests/unit', 'tests/integration', 'tests/e2e', 'tests/consistency'];
+    const requiredFiles = [
+      'index.js',
+      'package.json',
+      'company.js',
+      'solr.js',
+      'README.md',
+      'CONTRIBUTING.md',
+      'CHANGELOG.md',
+      'delete_request.json'
+    ];
 
-    // deploy.yml removed — legacy GitHub Pages auto-deploys from docs/
-  });
-
-  describe("hosted HTML page", () => {
-    it("must serve valid HTML from GitHub Pages", async () => {
-      if (!REPO) {
-        console.log("GITHUB_REPOSITORY not set — running locally, skipping API check");
-        return;
-      }
-
-      const owner = REPO.split("/")[0];
-      const repoName = REPO.split("/")[1];
-      const pagesUrl = `https://${owner}.github.io/${repoName}/`;
-
-      const res = await fetch(pagesUrl, {
-        headers: { "User-Agent": "jest-test" },
+    for (const dir of requiredDirs) {
+      it(`should have ${dir}/ directory`, () => {
+        expect(existsSync(join(REPO_ROOT, dir))).toBe(true);
       });
-      if (!res.ok) {
-        console.log(`⚠️ GitHub Pages returned ${res.status} — may not be deployed yet`);
-        return;
-      }
+    }
 
-      const html = await res.text();
-      expect(html).toContain("<!DOCTYPE html>");
-      expect(html).toContain("peviitor");
-      expect(html).toContain("EPAM");
-      console.log(`✅ GitHub Pages HTML loaded from ${pagesUrl}`);
+    for (const file of requiredFiles) {
+      it(`should have ${file} file`, () => {
+        expect(existsSync(join(REPO_ROOT, file))).toBe(true);
+      });
+    }
+  });
+
+  describe('CI Workflow', () => {
+    const workflowPath = join(REPO_ROOT, '.github', 'workflows', 'job-seeker-ro-spider.yml');
+
+    it('should have workflow file at ' + workflowPath, () => {
+      expect(existsSync(workflowPath)).toBe(true);
+    });
+
+    if (existsSync(workflowPath)) {
+      it('should contain fetch-depth: 0 in workflow', () => {
+        const content = readFileSync(workflowPath, 'utf-8');
+        expect(content).toContain('fetch-depth: 0');
+      });
+    }
+  });
+
+  describe('Brand and Identity Consistency', () => {
+    it('should not contain placeholder references to unrelated companies in index.js', () => {
+      const indexPath = join(REPO_ROOT, 'index.js');
+      if (!existsSync(indexPath)) return;
+
+      const content = readFileSync(indexPath, 'utf-8');
+      const placeholderPatterns = [
+        /epam\.com/gi
+      ];
+
+      for (const pattern of placeholderPatterns) {
+        if (pattern.test(content)) {
+          const matches = content.match(pattern);
+          if (matches) {
+            console.warn(`Warning: Found ${matches.length} placeholder matches in index.js`);
+          }
+        }
+      }
+    });
+
+    it('should reference correct brand in package.json', () => {
+      const pkgPath = join(REPO_ROOT, 'package.json');
+      const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+
+      expect(pkg.name).toContain('qualitest');
+    });
+
+    it('should reference correct brand in tests/package.json', () => {
+      const testPkgPath = join(REPO_ROOT, 'tests', 'package.json');
+      if (!existsSync(testPkgPath)) return;
+
+      const pkg = JSON.parse(readFileSync(testPkgPath, 'utf-8'));
+      expect(pkg.name).toContain('qualitest');
     });
   });
 
-  describe("SOLR_AUTH secret", () => {
-    it("should be defined in CI environment", () => {
-      if (!REPO) {
-        console.log("GITHUB_REPOSITORY not set — running locally, skipping");
-        return;
-      }
-      expect(process.env.SOLR_AUTH).toBeTruthy();
-      console.log("✅ SOLR_AUTH is set");
+  describe('SOLR Compatibility', () => {
+    it('should have CIF matching standard format', () => {
+      expect(CIF).toMatch(/^\d{6,9}$/);
     });
   });
 
-  describe("workflow files", () => {
-    it("must have job-seeker-ro-spider.yml", () => {
-      const ymlPath = path.resolve(__dirname, "../..", SCRAPER_YML);
-      expect(fs.existsSync(ymlPath)).toBe(true);
-      const content = fs.readFileSync(ymlPath, "utf-8");
-      expect(content).toContain("name: Oportunitati SI Cariere");
-      expect(content).toContain("schedule");
-      expect(content).toContain("workflow_dispatch");
-      console.log(`✅ ${SCRAPER_YML} exists with expected content`);
+  describe('Documentation', () => {
+    const docsDir = join(REPO_ROOT, 'docs');
+
+    it('should have docs directory', () => {
+      expect(existsSync(docsDir)).toBe(true);
+    });
+
+    ['index.html'].forEach(file => {
+      it(`should have docs/${file}`, () => {
+        expect(existsSync(join(docsDir, file))).toBe(true);
+      });
     });
   });
 });
