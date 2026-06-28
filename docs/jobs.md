@@ -10,8 +10,8 @@
 | Location | GARA HERĂSTRĂU, 6, Bucureşti Sectorul 2, Bucureşti |
 | Website | [https://www.qualitestgroup.com](https://www.qualitestgroup.com) |
 | Careers | [https://apply.workable.com/qualitest-1/](https://apply.workable.com/qualitest-1/) |
-| Last Scraped | 2026-06-27 |
+| Last Scraped | 2026-06-28 |
 
 ## Current Job Listings (0)
 
-_Generated: 2026-06-27T12:06:59.093Z_
+_Generated: 2026-06-28T08:51:21.845Z_
