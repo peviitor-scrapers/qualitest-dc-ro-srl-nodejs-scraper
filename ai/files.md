@@ -26,7 +26,7 @@
 |------|-------------|
 | `tests/package.json` | Jest config for test suite - experimental VM modules, test scripts (unit/integration/e2e/consistency) |
 | `tests/company.json` | Mock company data used in unit tests |
-| `tests/validate-qualitest-jobs.js` | **QUALITEST-specific validator (used by CI).** Modes: `--head` (default), `--content`, `--browser` (Playwright). Called nightly by `automation-testing.yml` and manually via `job-deep-validate.yml`. Supports `--dry-run` and `--delete`. |
+| `tests/validate-qualitest-jobs.js` | **QUALITEST-specific validator (used by CI).** Modes: `--head` (default), `--content`, `--browser` (Playwright). Called nightly by `automation-testing.yml`. Supports `--dry-run` and `--delete`. |
 | `tests/unit/index.test.js` | Unit tests for index.js - parseApiJobs, mapToJobModel, transformJobsForSOLR |
 | `tests/unit/company.test.js` | Unit tests for company.js - getCompanyBrand, validateAndGetCompany, fallback caching |
 | `tests/unit/api.test.js` | Unit tests for api.js - query, upsert, delete, HTTP error handling |
@@ -74,8 +74,7 @@
 | `.github/CODEOWNERS` | Code ownership rules for PR reviews |
 | `.github/workflows/job-seeker-ro-spider.yml` | Daily scraping workflow (6 AM UTC) |
 | `.github/workflows/automation-testing.yml` | Automated tests on every push/PR |
-| `.github/workflows/job-deep-validate.yml` | Manual deep validation via Playwright (browser mode) |
-| `.github/workflows/automation-template-sync-check.yml` | Weekly check that derived scrapers are up to date with this template |
+| `.github/workflows/job-recovery-from-disaster.yml` | Company core recovery — re-upserts company if missing from core |
 | `CODE_OF_CONDUCT.md` | Community code of conduct (Contributor Covenant 2.0) |
 
 ## Data Files
