@@ -4,8 +4,40 @@ describe('index.js Component Tests', () => {
   let index;
 
   beforeAll(async () => {
-    index = await import('../../index.js');
+    index = await import('../../scraper/index.js');
   });
+
+  const sampleHtml = `
+<html>
+<body>
+  <div class="career-list-wrap">17 Result(s)</div>
+  <div class="attrax-vacancy-tile">
+    <div class="attrax-vacancy-tile__title">Senior Developer</div>
+    <a href="/en/job/123/senior-developer">View job</a>
+    <div class="attrax-vacancy-tile__item">
+      <div class="attrax-vacancy-tile__item-label">Location</div>
+      <div class="attrax-vacancy-tile__item-value">Bucharest</div>
+    </div>
+    <div class="attrax-vacancy-tile__item">
+      <div class="attrax-vacancy-tile__item-label">Work model</div>
+      <div class="attrax-vacancy-tile__item-value">Remote</div>
+    </div>
+  </div>
+  <div class="attrax-vacancy-tile">
+    <div class="attrax-vacancy-tile__title">Backend Engineer</div>
+    <a href="/en/job/456/backend-engineer">View job</a>
+    <div class="attrax-vacancy-tile__item">
+      <div class="attrax-vacancy-tile__item-label">Location</div>
+      <div class="attrax-vacancy-tile__item-value">Cluj-Napoca</div>
+    </div>
+    <div class="attrax-vacancy-tile__item">
+      <div class="attrax-vacancy-tile__item-label">Work model</div>
+      <div class="attrax-vacancy-tile__item-value">Hybrid</div>
+    </div>
+  </div>
+</body>
+</html>
+`;
 
   describe('transformJobsForSOLR', () => {
     it('should filter locations to only Romanian cities', () => {
@@ -30,8 +62,8 @@ describe('index.js Component Tests', () => {
 
     it('should keep company uppercase', () => {
       const payload = {
-        source: 'qualitestgroup.com',
-        company: 'qualitest dc ro s.r.l.',
+        source: 'apply.workable.com',
+        company: 'qualitest dc ro srl',
         cif: '39814543',
         jobs: [
           { url: 'https://test.com/1', title: 'Job 1', company: 'qualitest dc ro', cif: '39814543' }
@@ -40,7 +72,7 @@ describe('index.js Component Tests', () => {
 
       const result = index.transformJobsForSOLR(payload);
 
-      expect(result.company).toBe('QUALITEST DC RO S.R.L.');
+      expect(result.company).toBe('QUALITEST DC RO SRL');
     });
 
     it('should normalize workmode values', () => {
@@ -70,7 +102,7 @@ describe('index.js Component Tests', () => {
   describe('mapToJobModel', () => {
     it('should map raw job to job model format', () => {
       const rawJob = {
-        url: 'https://apply.workable.com/qualitest-1/j/ABC123',
+        url: 'https://apply.workable.com/job/123',
         title: 'Senior Developer',
         location: ['Bucharest'],
         tags: ['Java', 'Spring'],
@@ -117,85 +149,64 @@ describe('index.js Component Tests', () => {
   });
 
   describe('parseApiJobs', () => {
-    it('should parse Workable API response format', () => {
-      const apiData = {
-        total: 100,
-        results: [
-          {
-            id: 'ABC123',
-            title: 'Senior Developer',
-            location: { city: 'Bucharest', country: 'Romania' },
-            workplace: 'Hybrid',
-            url: 'https://apply.workable.com/qualitest-1/j/ABC123'
-          }
-        ]
-      };
+    const sampleApiData = {
+      results: [
+        {
+          id: "123",
+          title: "Senior Developer",
+          url: "https://apply.workable.com/qualitest-1/j/123",
+          workplace: "Remote",
+          location: { city: "Bucharest", country: "Romania" }
+        },
+        {
+          id: "456",
+          title: "Backend Engineer",
+          url: "https://apply.workable.com/qualitest-1/j/456",
+          workplace: "On-site",
+          location: { city: "Cluj-Napoca", country: "Romania" }
+        }
+      ],
+      total: 17
+    };
 
-      const result = index.parseApiJobs(apiData);
+    it('should parse Workable API results', () => {
+      const result = index.parseApiJobs(sampleApiData);
 
-      expect(result.jobs).toHaveLength(1);
-      expect(result.jobs[0].title).toBe('Senior Developer');
-      expect(result.jobs[0].location).toEqual(['Bucharest']);
-      expect(result.jobs[0].workmode).toBe('hybrid');
+      expect(result.total).toBe(17);
+      expect(result.jobs).toHaveLength(2);
+
+      const first = result.jobs[0];
+      expect(first.title).toBe('Senior Developer');
+      expect(first.url).toMatch(/^https:\/\/apply\.workable\.com\//);
+      expect(first.location).toEqual(['Bucharest']);
+      expect(first.workmode).toBe('remote');
+
+      const second = result.jobs[1];
+      expect(second.title).toBe('Backend Engineer');
+      expect(second.location).toEqual(['Cluj-Napoca']);
+      expect(second.workmode).toBe('on-site');
     });
 
-    it('should handle empty job list', () => {
-      const apiData = { total: 0, results: [] };
-
-      const result = index.parseApiJobs(apiData);
+    it('should handle empty results', () => {
+      const result = index.parseApiJobs({ results: [], total: 0 });
 
       expect(result.jobs).toEqual([]);
+      expect(result.total).toBe(0);
     });
 
-    it('should handle missing results field', () => {
+    it('should handle missing data', () => {
       const result = index.parseApiJobs({});
 
       expect(result.jobs).toEqual([]);
     });
 
-    it('should handle workmode from workplace field', () => {
-      const apiData = {
-        total: 2,
-        results: [
-          {
-            id: '1',
-            title: 'Remote Job',
-            location: { city: 'Bucharest' },
-            workplace: 'Remote',
-            url: 'https://apply.workable.com/qualitest-1/j/1'
-          },
-          {
-            id: '2',
-            title: 'Office Job',
-            location: { city: 'Cluj-Napoca' },
-            workplace: 'On-site',
-            url: 'https://apply.workable.com/qualitest-1/j/2'
-          }
-        ]
-      };
+    it('should fall back to constructed URL when url is missing', () => {
+      const data = { results: [{ id: "999", title: "QA Engineer", workplace: "Hybrid" }], total: 1 };
+      const result = index.parseApiJobs(data);
 
-      const result = index.parseApiJobs(apiData);
-
-      expect(result.jobs[0].workmode).toBe('remote');
-      expect(result.jobs[1].workmode).toBe('on-site');
-    });
-
-    it('should default to city when no location city is provided', () => {
-      const apiData = {
-        total: 1,
-        results: [
-          {
-            id: '1',
-            title: 'Job',
-            location: { country: 'Romania' },
-            url: 'https://apply.workable.com/qualitest-1/j/1'
-          }
-        ]
-      };
-
-      const result = index.parseApiJobs(apiData);
-
-      expect(result.jobs[0].location).toEqual(['Romania']);
+      expect(result.jobs[0].url).toBe('https://apply.workable.com/qualitest-1/j/999');
+      expect(result.jobs[0].location).toEqual([]);
+      expect(result.jobs[0].workmode).toBe('hybrid');
     });
   });
 });

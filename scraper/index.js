@@ -2,12 +2,17 @@ import fetch from "node-fetch";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import { validateAndGetCompany } from "./company.js";
-import { querySOLR, deleteJobByUrl, upsertJobs, upsertCompany } from "./solr.js";
-import { generateJobsMarkdown } from "./src/markdown-generator.js";
+import { querySOLR, upsertJobs, upsertCompany, deleteJobByUrl } from "./api.js";
+import { generateJobsMarkdown } from "./markdown-generator.js";
 import companyConfig from "./config/company.js";
+import scraperConfig from "./config/scraper.js";
 
-const COMPANY_CIF = companyConfig.cif;
+const COMPANY_CIF = companyConfig.id;
+const JOB_BASE = scraperConfig.apiBase;
+const ACCOUNT = scraperConfig.apiAccount;
+
 const TIMEOUT = 10000;
+
 let COMPANY_NAME = null;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -53,8 +58,8 @@ async function searchANOFM(cif) {
   return jobs;
 }
 
-async function fetchWorkableJobsPage(page) {
-  const url = `${companyConfig.apiBase}/api/v3/accounts/qualitest-1/jobs`;
+async function fetchJobsPage(pageNum) {
+  const url = `${JOB_BASE}/api/v3/accounts/${ACCOUNT}/jobs`;
   const body = {
     query: "",
     department: [],
@@ -67,34 +72,37 @@ async function fetchWorkableJobsPage(page) {
     headers: {
       "Content-Type": "application/json",
       "Accept": "application/json",
-      "Referer": "https://apply.workable.com/qualitest-1/",
-      "Origin": "https://apply.workable.com",
+      "Referer": `https://apply.workable.com/${ACCOUNT}/`,
+      "Origin": JOB_BASE,
       "User-Agent": "job_seeker_ro_spider"
     },
     body: JSON.stringify(body)
   });
   if (!res.ok) {
-    throw new Error(`Workable API error ${res.status} for page=${page}`);
+    throw new Error(`Workable API error ${res.status} for page=${pageNum}`);
   }
-  const data = await res.json();
-  return data;
+  return await res.json();
 }
 
-function parseWorkableJobs(apiData) {
-  const results = apiData.results || [];
+function parseApiJobs(apiData) {
+  const jobs = apiData.results || [];
+  const total = apiData.total || 0;
+
   return {
-    jobs: results.map(job => {
+    jobs: jobs.map(job => {
       let workmode = "hybrid";
       const workplace = (job.workplace || "").toLowerCase();
       if (workplace.includes("remote")) workmode = "remote";
       else if (workplace.includes("office") || workplace.includes("on-site")) workmode = "on-site";
+
       const location = [];
       if (job.location) {
         if (job.location.city) location.push(job.location.city);
         else if (job.location.country) location.push(job.location.country);
       }
+
       return {
-        url: job.url || `https://apply.workable.com/qualitest-1/j/${job.id}`,
+        url: job.url || `https://apply.workable.com/${ACCOUNT}/j/${job.id}`,
         title: job.title,
         uid: job.id,
         workmode,
@@ -102,30 +110,38 @@ function parseWorkableJobs(apiData) {
         tags: []
       };
     }),
-    total: apiData.total || 0
+    total
   };
 }
 
 async function scrapeAllListings(testOnlyOnePage = false) {
-  console.log("Fetching Workable jobs...");
-  const data = await fetchWorkableJobsPage(1);
-  const { jobs } = parseWorkableJobs(data);
-  const seenUrls = new Set();
   const allJobs = [];
+  const seenUrls = new Set();
 
+  console.log(`Fetching Workable jobs...`);
+  const data = await fetchJobsPage(1);
+  const { jobs } = parseApiJobs(data);
+
+  let newJobs = 0;
   for (const job of jobs) {
     if (!seenUrls.has(job.url)) {
       seenUrls.add(job.url);
       allJobs.push(job);
+      newJobs++;
     }
   }
-
   console.log(`Total unique jobs collected: ${allJobs.length}`);
+
+  if (testOnlyOnePage) {
+    console.log("Test mode: single page.");
+  }
+
   return allJobs;
 }
 
 function mapToJobModel(rawJob, cif, companyName = COMPANY_NAME) {
   const now = new Date().toISOString();
+
   const job = {
     url: rawJob.url,
     title: rawJob.title,
@@ -137,7 +153,9 @@ function mapToJobModel(rawJob, cif, companyName = COMPANY_NAME) {
     date: now,
     status: "scraped"
   };
+
   Object.keys(job).forEach((k) => job[k] === undefined && delete job[k]);
+
   return job;
 }
 
@@ -155,6 +173,7 @@ function transformJobsForSOLR(payload) {
     'Dumbrăvița', 'Dumbravita', 'Voluntari', 'Popești-Leordeni', 'Popesti-Leordeni',
     'Chitila', 'Mogoșoaia', 'Mogosoaia', 'Otopeni'
   ];
+
   const citySet = new Set(romanianCities.map(c => c.toLowerCase()));
 
   const normalizeWorkmode = (wm) => {
@@ -174,6 +193,7 @@ function transformJobsForSOLR(payload) {
         if (lower === 'romania' || lower === 'românia') return true;
         return citySet.has(lower);
       }).map(loc => loc.toLowerCase() === 'romania' ? 'România' : loc);
+
       return {
         ...job,
         location: validLocations.length > 0 ? validLocations : ['România'],
@@ -181,81 +201,90 @@ function transformJobsForSOLR(payload) {
       };
     })
   };
+
   return transformed;
 }
+
+// ============================================================================
+// MAIN
+// ============================================================================
 
 async function main() {
   const testOnlyOnePage = process.argv.includes("--test");
 
   try {
-    fs.mkdirSync("tmp", { recursive: true });
-    console.log("=== Step 1: Get existing jobs count ===");
+    fs.mkdirSync("scraper", { recursive: true });
+
+    console.log("=== Step 1: Get existing jobs from SOLR ===");
     const existingResult = await querySOLR(COMPANY_CIF);
     const existingCount = existingResult.numFound;
+    const existingUrls = new Set(existingResult.docs.map(doc => doc.url).filter(Boolean));
     console.log(`Found ${existingCount} existing jobs in SOLR`);
 
     console.log("=== Step 2: Validate company via ANAF ===");
-    const { company, cif, address } = await validateAndGetCompany();
+    const { company, cif, address, status } = await validateAndGetCompany();
     COMPANY_NAME = company;
-    const localCif = cif;
+    if (status === 'inactive') {
+      console.log("⚠️ Company is INACTIVE — jobs deleted, skipping scrape.");
+      return;
+    }
 
     try {
       await upsertCompany({
         id: cif,
         company,
-        brand: companyConfig.brand,
-        status: "activ",
-        location: address ? [address] : [companyConfig.defaultLocation],
-        website: [companyConfig.website],
-        career: [companyConfig.careerUrl],
-        lastScraped: new Date().toISOString().split('T')[0],
-        scraperFile: companyConfig.scraperFile
+        brand: companyConfig.brand || undefined,
+        status: status === 'active' ? 'activ' : (status || "activ"),
+        location: address ? [address] : companyConfig.location,
+        website: companyConfig.website,
+        career: companyConfig.career,
+        lastScraped: new Date().toISOString().split('T')[0]
       });
     } catch (err) {
-      console.log(`Note: Could not upsert company to SOLR core: ${err.message}`);
+      console.log(`Note: Could not upsert company: ${err.message}`);
     }
 
     const rawJobs = await scrapeAllListings(testOnlyOnePage);
     const scrapedCount = rawJobs.length;
-    console.log(`📊 Jobs scraped from Workable: ${scrapedCount}`);
+    console.log(`Jobs scraped from Workable website: ${scrapedCount}`);
 
     if (!testOnlyOnePage) {
-      const anofmJobs = await searchANOFM(localCif);
+      const anofmJobs = await searchANOFM(cif);
       const anofmCount = anofmJobs.length;
       for (const job of anofmJobs) {
         if (!rawJobs.find(j => j.url === job.url)) {
           rawJobs.push(job);
         }
       }
-      console.log(`📊 Jobs added from ANOFM: ${anofmCount}`);
+      console.log(`Jobs added from ANOFM: ${anofmCount}`);
     }
 
-    const jobs = rawJobs.map(job => mapToJobModel(job, localCif));
+    const jobs = rawJobs.map(job => mapToJobModel(job, cif));
 
     const payload = {
       source: "qualitestgroup.com",
       scrapedAt: new Date().toISOString(),
       company: COMPANY_NAME,
-      cif: localCif,
+      cif: cif,
       jobs
     };
 
     console.log("Transforming jobs for SOLR...");
     const transformedPayload = transformJobsForSOLR(payload);
     const validCount = transformedPayload.jobs.filter(j => j.location).length;
-    console.log(`📊 Jobs with valid Romanian locations: ${validCount}`);
+    console.log(`Jobs with valid Romanian locations: ${validCount}`);
 
-    fs.writeFileSync("tmp/jobs.json", JSON.stringify(transformedPayload, null, 2), "utf-8");
-    console.log("Saved tmp/jobs.json");
+    fs.writeFileSync("scraper/jobs.json", JSON.stringify(transformedPayload, null, 2), "utf-8");
+    console.log("Saved scraper/jobs.json");
 
     const companyData = {
-      id: localCif,
+      id: cif,
       company: transformedPayload.company,
-      brand: companyConfig.brand,
-      status: "activ",
-      location: address ? [address] : [companyConfig.defaultLocation],
-      website: [companyConfig.website],
-      career: [companyConfig.careerUrl],
+      brand: companyConfig.brand || undefined,
+      status: status === 'active' ? 'activ' : (status || "activ"),
+      location: address ? [address] : companyConfig.location,
+      website: companyConfig.website,
+      career: companyConfig.career,
       lastScraped: new Date().toISOString().split('T')[0]
     };
     const markdown = generateJobsMarkdown(companyData, transformedPayload.jobs);
@@ -263,17 +292,48 @@ async function main() {
     fs.writeFileSync("docs/jobs.md", markdown, "utf-8");
     console.log("Saved docs/jobs.md");
 
-    fs.writeFileSync("docs/company.json", JSON.stringify(companyConfig, null, 2), "utf-8");
-    console.log("Saved docs/company.json");
+    fs.copyFileSync("scraper/config/company.json", "docs/company.json");
+    console.log("Copied scraper/config/company.json → docs/company.json");
 
-    console.log("\n=== Step 6: Upsert jobs to SOLR ===");
+    if (transformedPayload.jobs.length === 0) {
+      console.log("\n⚠️ No jobs to upsert (0 jobs scraped) — skipping API upsert/delete.");
+      console.log("=== DONE ===");
+      console.log("Scraper completed successfully!");
+      return;
+    }
+
+    console.log("\n=== Step 4: Upsert jobs to SOLR ===");
     await upsertJobs(transformedPayload.jobs);
 
+    const scrapedUrls = new Set(transformedPayload.jobs.map(job => job.url));
+    const staleUrls = [...existingUrls].filter(url => !scrapedUrls.has(url));
+
+    if (staleUrls.length > 0) {
+      console.log(`\n=== Step 4.5: Delete ${staleUrls.length} stale job(s) ===`);
+      let deletedCount = 0;
+      for (const url of staleUrls) {
+        try {
+          console.log(`  Deleting: ${url}`);
+          await deleteJobByUrl(url);
+          deletedCount++;
+        } catch (delErr) {
+          console.warn(`  ⚠️ Failed to delete: ${url} — ${delErr.message}`);
+        }
+      }
+      console.log(`✅ Deleted ${deletedCount}/${staleUrls.length} stale job(s)`);
+    } else {
+      console.log("\n✅ No stale jobs to delete");
+    }
+
+    console.log("\n=== Step 5: Summary ===");
+
+    await new Promise(r => setTimeout(r, 2000));
     const finalResult = await querySOLR(COMPANY_CIF);
-    console.log(`\n📊 === SUMMARY ===`);
-    console.log(`📊 Jobs existing in SOLR before scrape: ${existingCount}`);
-    console.log(`📊 Jobs scraped from Workable: ${scrapedCount}`);
-    console.log(`📊 Jobs in SOLR after scrape: ${finalResult.numFound}`);
+    console.log(`\n=== SUMMARY ===`);
+    console.log(`Jobs existing in SOLR before scrape: ${existingCount}`);
+    console.log(`Jobs scraped from Workable website: ${scrapedCount}`);
+    console.log(`Stale jobs attempted: ${staleUrls.length}`);
+    console.log(`Jobs in SOLR after scrape: ${finalResult.numFound}`);
     console.log(`====================`);
 
     console.log("\n=== DONE ===");
@@ -285,7 +345,7 @@ async function main() {
   }
 }
 
-export { parseWorkableJobs as parseApiJobs, mapToJobModel, transformJobsForSOLR };
+export { parseApiJobs, mapToJobModel, transformJobsForSOLR };
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   main();

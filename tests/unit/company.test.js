@@ -42,37 +42,35 @@ function peviitorResponse(companies) {
   };
 }
 
-function solrResponse(numFound, docs) {
+function solrResponse(total, data) {
   return {
     ok: true,
-    json: async () => ({ response: { numFound, docs } })
+    json: async () => ({ total, data })
   };
 }
 
 const QUALITEST_ANAF_RECORD = {
   cui: 39814543,
   name: 'QUALITEST DC RO S.R.L.',
-  address: 'GARA HERĂSTRĂU, 6, Bucureşti Sectorul 2, Bucureşti',
+  address: 'PIPERA, 43, Bucureşti Sectorul 2, Bucureşti',
   caenCode: '6210',
   inactive: false,
   vatRegistered: true,
-  eFacturaRegistered: false,
-  headquartersAddress: { locality: 'Bucureşti Sectorul 2' }
+  eFacturaRegistered: true,
+  headquartersAddress: { locality: 'Bucureşti Sectorul 1' }
 };
 
 describe('company.js', () => {
   let company;
 
   beforeAll(async () => {
-    process.env.SOLR_AUTH = 'test:test';
     fs.mkdirSync("tmp", { recursive: true });
     backupFile(COMPANY_JSON_PATH);
     backupFile(ROOT_COMPANY_JSON_PATH);
-    company = await import('../../company.js');
+    company = await import('../../scraper/company.js');
   });
 
   afterAll(() => {
-    delete process.env.SOLR_AUTH;
     restoreFile(COMPANY_JSON_PATH);
     restoreFile(ROOT_COMPANY_JSON_PATH);
   });
@@ -83,7 +81,7 @@ describe('company.js', () => {
   });
 
   describe('getCompanyData (no cache)', () => {
-    it('should fetch company via direct CIF lookup and return company data', async () => {
+    it('should fetch QUALITEST via direct CIF lookup and return company data', async () => {
       mockFetch.mockResolvedValueOnce(anafCompanyResponse(QUALITEST_ANAF_RECORD));
 
       const result = await company.getCompanyData();
@@ -156,6 +154,7 @@ describe('company.js', () => {
       expect(typeof result.existingJobsCount).toBe('number');
     });
 
+    // QUALITEST e activă — testul inactive se rulează doar dacă firma e inactivă
     if (QUALITEST_ANAF_RECORD.inactive) {
       it('should return inactive status when company is inactive', async () => {
         const inactiveRecord = { ...QUALITEST_ANAF_RECORD, inactive: true };

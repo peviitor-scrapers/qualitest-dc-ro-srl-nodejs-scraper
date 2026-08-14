@@ -1,99 +1,26 @@
 {
-  "validatedAt": "2026-06-22T10:00:00.000Z",
+  "validatedAt": "2026-07-10T00:00:00.000Z",
   "source": "ANAF",
-  "brand": "Qualitest",
+  "brand": "QUALITEST",
   "anaf": {
     "cui": 39814543,
     "name": "QUALITEST DC RO S.R.L.",
-    "address": "MUNICIPIUL BUCUREŞTI, SECTOR 2, GARA HERĂSTRĂU, NR.6, ET.1",
-    "registrationNumber": "J40/8760/2010",
-    "phone": "",
-    "fax": "",
-    "postalCode": "020334",
+    "address": "PIPERA, 43, Bucureşti Sectorul 2, Bucureşti",
     "caenCode": "6210",
-    "iban": "",
-    "registrationState": "",
-    "registrationDate": "2010-05-06",
-    "fiscalAuthority": "Direcţia Generală a Finanţelor Publice Municipiul Bucureşti",
-    "ownershipForm": "PROPR.PRIVATA-CAPITAL PRIVAT STRAIN",
-    "organizationForm": "PERSOANA JURIDICA",
-    "legalForm": "SOCIETATE COMERCIALĂ CU RĂSPUNDERE LIMITATĂ",
-    "vatRegistered": true,
-    "vatPeriods": [
-      {
-        "start": "2010-05-06",
-        "end": null,
-        "yearStart": "",
-        "message": ""
-      }
-    ],
-    "cashBasisVat": false,
-    "cashBasisVatStart": null,
-    "cashBasisVatEnd": null,
     "inactive": false,
-    "inactiveSince": null,
-    "reactivatedSince": null,
-    "splitVat": false,
-    "eFacturaRegistered": false,
-    "headquartersAddress": {
-      "street": "Gara Herăstrău",
-      "number": "6",
-      "locality": "Sector 2 Mun. Bucureşti",
-      "county": "MUNICIPIUL BUCUREŞTI",
-      "country": "",
-      "postalCode": "020334"
-    },
-    "fiscalAddress": {
-      "street": "",
-      "number": "",
-      "locality": "",
-      "county": "",
-      "country": "",
-      "postalCode": ""
-    },
-    "administrators": [
-      {
-        "name": "SHAI LIBERMAN",
-        "role": "administrator"
-      }
-    ],
-    "authorizedCaenCodes": [
-      "6210",
-      "6201",
-      "6202",
-      "6209",
-      "7022"
-    ],
-    "onrcStatus": 1048,
-    "onrcStatusLabel": "Funcțiune"
+    "vatRegistered": true,
+    "eFacturaRegistered": true,
+    "headquartersAddress": { "locality": "Bucureşti Sectorul 2" }
   },
-  "peviitor": {
-    "id": "39814543",
-    "company": "QUALITEST DC RO S.R.L.",
-    "brand": "Qualitest",
-    "group": "Qualitest",
-    "status": "activ",
-    "website": [
-      "https://www.qualitestgroup.com"
-    ],
-    "career": [
-      "https://apply.workable.com/qualitest-1/"
-    ],
-    "lastScraped": "2026-06-22",
-    "scraperFile": "qualitest-dc-ro-srl-nodejs-scraper.md",
-    "_version_": 1,
-    "_root_": "39814543"
-  },
+  "peviitor": null,
   "summary": {
     "company": "QUALITEST DC RO S.R.L.",
     "cif": "39814543",
     "active": true,
-    "inactiveSince": null,
-    "reactivatedSince": null,
-    "address": "MUNICIPIUL BUCUREŞTI, SECTOR 2, GARA HERĂSTRĂU, NR.6, ET.1",
-    "registrationNumber": "J40/8760/2010",
+    "address": "PIPERA, 43, Bucureşti Sectorul 2, Bucureşti",
+    "registrationNumber": "J2021008222407",
     "caenCode": "6210",
     "vatRegistered": true,
-    "eFacturaRegistered": false
+    "eFacturaRegistered": true
   }
 }

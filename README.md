@@ -1,48 +1,145 @@
-# 🤖 Qualitest DC RO S.R.L. — Node.js Job Scraper
+# job_seeker_ro_spider — Qualitest DC RO Scraper
 
-[![Generated from: EPAM](https://img.shields.io/badge/Generated%20from-EPAM%20Template-blue)](https://github.com/sebiboga/epam-systems-international-srl-nodejs-scraper)
-[![GitHub repo](https://img.shields.io/badge/GitHub-sebiboga%2Fqualitest--dc--ro--srl--nodejs--scraper-green)](https://github.com/sebiboga/qualitest-dc-ro-srl-nodejs-scraper)
-[![CI](https://github.com/sebiboga/qualitest-dc-ro-srl-nodejs-scraper/actions/workflows/job-seeker-ro-spider.yml/badge.svg)](https://github.com/sebiboga/qualitest-dc-ro-srl-nodejs-scraper/actions/workflows/job-seeker-ro-spider.yml)
-[![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-%E2%9C%93-brightgreen)](https://sebiboga.github.io/qualitest-dc-ro-srl-nodejs-scraper/)
+[![Oportunitati SI Cariere](https://github.com/peviitor-scrapers/qualitest-dc-ro-srl-nodejs-scraper/actions/workflows/job-seeker-ro-spider.yml/badge.svg)](https://github.com/peviitor-scrapers/qualitest-dc-ro-srl-nodejs-scraper/actions/workflows/job-seeker-ro-spider.yml)
+[![Automation Tests](https://github.com/peviitor-scrapers/qualitest-dc-ro-srl-nodejs-scraper/actions/workflows/automation-testing.yml/badge.svg)](https://github.com/peviitor-scrapers/qualitest-dc-ro-srl-nodejs-scraper/actions/workflows/automation-testing.yml)
+
+[![Version](https://img.shields.io/github/package-json/v/peviitor-scrapers/qualitest-dc-ro-srl-nodejs-scraper?label=version&color=blue)](CHANGELOG.md)
+[![Test Results](https://img.shields.io/badge/test--results-HTML-9b59b6)](https://peviitor-scrapers.github.io/qualitest-dc-ro-srl-nodejs-scraper/test-results/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![JavaScript](https://img.shields.io/badge/javascript-ESM-F7DF1E?logo=javascript&logoColor=black)](https://ecma-international.org/)
+[![Node.js](https://img.shields.io/badge/node-24-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![Website](https://img.shields.io/website?url=https%3A%2F%2Fpeviitor.ro&label=peviitor.ro)](https://peviitor.ro)
+[![API](https://img.shields.io/website?url=https%3A%2F%2Fapi.peviitor.ro%2F&label=api.peviitor.ro)](https://api.peviitor.ro/)
+[![SOLR](https://img.shields.io/website?url=https%3A%2F%2Fsolr.peviitor.ro%2Fsolr%2F&label=solr.peviitor.ro)](https://solr.peviitor.ro/solr/)
+[![GitHub Pages](https://img.shields.io/github/deployments/peviitor-scrapers/qualitest-dc-ro-srl-nodejs-scraper/github-pages?label=GitHub%20Pages)](https://peviitor-scrapers.github.io/qualitest-dc-ro-srl-nodejs-scraper/)
 
-Scraper automat pentru locurile de muncă **Qualitest DC RO S.R.L.** (CIF: 39814543) — extrage de pe [Workable](https://apply.workable.com/qualitest-1/) și publică pe [peviitor.ro](https://peviitor.ro).
+**job_seeker_ro_spider** — un scraper pentru job-urile QUALITEST DC RO S.R.L. din România. Extrage anunțurile de pe [Qualitest Workable](https://apply.workable.com/qualitest-1/) și le publică în [peviitor.ro](https://peviitor.ro) prin API-ul Peviitor.
 
-## Company Information
+> **🌱 Derived scraper.** Acest repo a fost derivat din [EPAM template](https://github.com/sebiboga/epam-systems-international-srl-nodejs-scraper). Identitatea companiei trăiește în `scraper/config/company.json`.
+> 
+> Derivat din: `sebiboga/epam-systems-international-srl-nodejs-scraper`
 
-- **Legal Name:** QUALITEST DC RO S.R.L.
-- **Brand:** Qualitest
-- **CIF:** 39814543
-- **Website:** https://www.qualitestgroup.com
-- **Career URL:** https://apply.workable.com/qualitest-1/
-- **Scraping Method:** Workable API
+## Overview
 
-## How It Works
+Proiectul automatizează colectarea zilnică a job-urilor QUALITEST din România, menținând board-ul peviitor.ro la zi cu cele mai recente oportunități de carieră.
 
-1. **Workable API Polling**: Sends POST requests to `https://apply.workable.com/api/v3/accounts/qualitest-1/jobs`
-2. **ANOFM Fallback**: Also scrapes ANOFM API by CIF for completeness
-3. **SOLR Upsert**: Publishes jobs to the peviitor.ro SOLR index
-4. **Scheduled**: Runs via GitHub Actions (configurable cron)
+## Features
+
+- Extrage job-uri din Workable API (POST `/api/v3/accounts/qualitest-1/jobs`)
+- Validează compania via ANAF (CIF, status activ/inactiv, adresă completă)
+- **Cache ANAF la 7 zile** — committed în repo, nu lovește demoANAF la fiecare scrape
+- **Fallback la cache stale** dacă ANAF e indisponibil
+- Stochează prin Peviitor API (job core + company core)
+- Generează `docs/jobs.md` automat — accesibil pe GitHub Pages
+- **Identitate companie într-un singur fișier** (`scraper/config/company.json`)
+- GitHub Actions: scrape zilnic + testare automată (unit, integration, e2e, consistency)
+- Fără `SOLR_AUTH` — toate operațiile merg prin Peviitor API (public)
+- Se identifică prin User-Agent: `job_seeker_ro_spider`
+- Include ANOFM scraping (API public filtrat pe CIF)
 
 ## Project Structure
 
 ```
-config/
-  company.json         ← Single source of truth for company identity
-.github/workflows/    ← CI/CD pipeline definitions
-docs/                 ← GitHub Pages site (scraped jobs display)
-tests/                ← Unit, integration, e2e, and consistency tests
-index.js              ← Main scraper entry point
-company.js            ← Company data retrieval / ANAF validation
-solr.js               ← SOLR index operations
+├── scraper/
+│   ├── index.js                    # Main scraper entry point
+│   ├── company.js                  # Company validation via ANAF + Peviitor
+│   ├── anaf.js                     # ANAF API core module
+│   ├── api.js                      # Peviitor API (query, upsert, delete)
+│   ├── markdown-generator.js       # Generates docs/jobs.md
+│   ├── job-validator.js            # Shared job validation
+│   ├── validate-jobs.js            # Deep validator CLI
+│   ├── demoanaf.js                 # ANAF CLI
+│   └── config/
+│       ├── company.json            # Single source of truth: id, brand, URLs
+│       ├── company.js              # ESM loader for company.json
+│       ├── scraper.json            # apiBase config
+│       └── scraper.js              # ESM loader for scraper.json
+├── company.json                    # ANAF data cache (committed, 7-day TTL)
+├── ai/                             # Project documentation
+├── tests/
+│   ├── unit/                       # Unit tests (parseApiJobs, mapToJobModel, transformJobsForSOLR)
+│   ├── integration/                # Integration tests (ANAF + Peviitor live)
+│   ├── e2e/                        # E2E tests (real Workable API)
+│   └── consistency/                # Repo configuration tests
+├── docs/
+│   ├── index.html              # Live job board (GitHub Pages)
+│   └── jobs.md                 # Scraped jobs in markdown (generated by CI)
+└── .github/
+    └── workflows/
+        ├── job-seeker-ro-spider.yml     # Daily scraping at 6 AM UTC
+        ├── automation-testing.yml       # Tests on push/PR
+        └── job-recovery-from-disaster.yml  # Company core recovery
 ```
 
-## Related Repositories
+## Setup
 
-- [EPAM Template](https://github.com/sebiboga/epam-systems-international-srl-nodejs-scraper) — The template this repo was derived from
-- [AI-Factory / Job Seeker RO Spider](https://github.com/sebiboga/AI-Factory-job-seeker-ro-spider) — Orchestrator for all derived scrapers
-- [peviitor.ro](https://peviitor.ro) — The Romanian job aggregator
+### Prerequisites
+
+- Node.js 24+
+- npm
+
+### Installation
+
+```bash
+npm install
+```
+
+### Configuration
+
+Nu e necesară nicio variabilă de mediu — toate operațiile merg prin Peviitor API (public, fără autentificare).
+
+## Usage
+
+### Run the Scraper
+
+```bash
+npm run scrape
+```
+
+### Run Tests
+
+```bash
+npm test           # All tests
+npm run test:unit  # Unit tests only
+npm run test:integration  # Integration tests
+npm run test:e2e   # E2E tests
+```
+
+## Workflows
+
+### Daily Scraping
+
+The `job-seeker-ro-spider.yml` workflow runs daily at 6 AM UTC via GitHub Actions.
+
+### Test Automation
+
+The `automation-testing.yml` workflow runs on every push and pull request.
+
+## Derivation
+
+This scraper was derived from the [EPAM template](https://github.com/sebiboga/epam-systems-international-srl-nodejs-scraper) using the autonomous derivation algorithm documented in [ALGORITHM.md](https://github.com/sebiboga/AI-Factory-job-seeker-ro-spider/blob/main/ALGORITHM.md).
+
+## Acknowledgments
+
+Developed with the assistance of AI agents executing the derivation algorithm from the EPAM template.
+
+Special thanks to the open source community and the peviitor.ro team.
 
 ## License
 
-MIT
+Copyright (c) 2024-2026 BOGA SEBASTIAN-NICOLAE
+
+Licensed under the [MIT License](LICENSE).
+
+## Managed By
+
+This project is managed by [ASOCIATIA OPORTUNITATI SI CARIERE](https://oportunitatisicariere.ro) and used as a web scraper for the [peviitor.ro](https://peviitor.ro) job board project.
+
+## Robots.txt Policy
+
+This scraper respects the rules from [robots.txt](https://apply.workable.com/robots.txt) of Workable.
+
+**Key points:**
+- The whole site is **allowed** by robots.txt (`Disallow:` empty)
+- `Content-Signal: search=yes, ai-input=yes, ai-train=no` — the site permits AI scraping
+- Scraper behavior: 1 API request per scrape, no concurrent requests

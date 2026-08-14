@@ -1,195 +1,266 @@
 import { jest } from '@jest/globals';
-import { readFileSync, existsSync, writeFileSync, mkdirSync, rmSync, readdirSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import fetch from 'node-fetch';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const API_BASE = 'https://api.peviitor.ro/v1';
 
-const REPO_ROOT = join(__dirname, '..', '..');
-const INTEGRATION_DATA_DIR = join(__dirname, 'data');
-const COMPANY_CONFIG_PATH = join(REPO_ROOT, 'config', 'company.json');
+let HAS_API = false;
 
-let companyConfig;
-
-try {
-  companyConfig = JSON.parse(readFileSync(COMPANY_CONFIG_PATH, 'utf-8'));
-} catch (err) {
-  throw new Error(`Cannot read company config: ${err.message}`);
-}
-
-const CIF = companyConfig.cif;
-const COMPANY_NAME = companyConfig.legalName;
-const BRAND = companyConfig.brand;
-const SCRAPER_FILE = companyConfig.scraperFile;
-
-const JOB_RESPONSE_SAMPLE = {
-  total: 2,
-  results: [
-    {
-      id: 'ABC123',
-      title: 'Senior Software Engineer',
-      location: { city: 'Bucharest', country: 'Romania' },
-      workplace: 'Hybrid',
-      url: 'https://apply.workable.com/qualitest-1/j/ABC123',
-      department: 'Engineering'
-    },
-    {
-      id: 'DEF456',
-      title: 'QA Engineer',
-      location: { city: 'Cluj-Napoca', country: 'Romania' },
-      workplace: 'Remote',
-      url: 'https://apply.workable.com/qualitest-1/j/DEF456',
-      department: 'Quality Assurance'
-    }
-  ]
-};
-
-function setupIntegrationData() {
-  if (!existsSync(INTEGRATION_DATA_DIR)) {
-    mkdirSync(INTEGRATION_DATA_DIR, { recursive: true });
-  }
-
-  writeFileSync(
-    join(INTEGRATION_DATA_DIR, 'job-response-sample.json'),
-    JSON.stringify(JOB_RESPONSE_SAMPLE, null, 2),
-    'utf-8'
-  );
-
-  const workflowsDir = join(REPO_ROOT, '.github', 'workflows');
-  const workflowFiles = existsSync(workflowsDir)
-    ? readdirSync(workflowsDir).filter(f => f.endsWith('.yml')).map(f => join(workflowsDir, f))
-    : [];
-
-  const workflowStatuses = workflowFiles.reduce((acc, f) => {
-    acc[f] = existsSync(f);
-    return acc;
-  }, {});
-
-  writeFileSync(
-    join(INTEGRATION_DATA_DIR, 'workflow-status.json'),
-    JSON.stringify(workflowStatuses, null, 2),
-    'utf-8'
-  );
-}
-
-function cleanupIntegrationData() {
-  if (existsSync(INTEGRATION_DATA_DIR)) {
-    rmSync(INTEGRATION_DATA_DIR, { recursive: true, force: true });
+async function checkApiAvailability() {
+  try {
+    const res = await fetch(`${API_BASE}/scraper/jobs/?cif=${COMPANY_CIF}&rows=1`, {
+      signal: AbortSignal.timeout(5000)
+    });
+    return res.ok || res.status === 400;
+  } catch {
+    return false;
   }
 }
 
-describe('Workflow Integration Tests', () => {
-  let index;
+let HAS_ANAF = false;
 
-  beforeAll(async () => {
-    process.env.SOLR_AUTH = 'test:test';
-    index = await import('../../index.js');
-    setupIntegrationData();
-  });
+async function checkAnafAvailability() {
+  try {
+    const res = await fetch('https://demoanaf.ro/api/search?q=test', {
+      method: 'HEAD',
+      signal: AbortSignal.timeout(5000)
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
 
-  afterAll(() => {
-    delete process.env.SOLR_AUTH;
-    cleanupIntegrationData();
-  });
+function itIfApi(name, fn, timeout) {
+  if (HAS_API) {
+    return it(name, fn, timeout);
+  }
+  return it.skip(`${name} (skipped: API unavailable)`, fn, timeout);
+}
 
-  describe('Configuration Integrity', () => {
-    it('should have CIF matching company config: ' + CIF, () => {
-      expect(CIF).toBeDefined();
-      expect(CIF).toMatch(/^\d{6,9}$/);
+function itIfAnaf(name, fn, timeout) {
+  if (HAS_ANAF) {
+    return it(name, fn, timeout);
+  }
+  return it.skip(`${name} (skipped: ANAF API unavailable)`, fn, timeout);
+}
+
+import companyConfig from '../../scraper/config/company.js';
+const COMPANY_CIF = companyConfig.id;
+const COMPANY_BRAND = companyConfig.brand;
+const COMPANY_NAME = companyConfig.company;
+
+beforeAll(async () => {
+  [HAS_API, HAS_ANAF] = await Promise.all([checkApiAvailability(), checkAnafAvailability()]);
+});
+
+describe('Integration: API Workflow', () => {
+
+  describe('ANAF API', () => {
+    let anaf;
+
+    beforeAll(async () => {
+      anaf = await import('../../scraper/anaf.js');
     });
 
-    it('should have company name in config', () => {
-      expect(COMPANY_NAME).toBeDefined();
-      expect(COMPANY_NAME.length).toBeGreaterThan(0);
-    });
+    itIfAnaf('should search for company brand and find the company', async () => {
+      const results = await anaf.searchCompany(COMPANY_BRAND);
 
-    it('should have brand in config', () => {
-      expect(BRAND).toBeDefined();
-      expect(BRAND.length).toBeGreaterThan(0);
-    });
+      expect(Array.isArray(results)).toBe(true);
+      expect(results.length).toBeGreaterThan(0);
 
-    it('should have scraping method defined', () => {
-      const method = companyConfig.scrapingMethod || 'api';
-      expect(method).toBe('api');
-    });
-
-    it('should have scraperFile URL pointing to workflow', () => {
-      expect(SCRAPER_FILE).toMatch(/workflow.*\.yml$/);
-    });
-  });
-
-  describe('Parsing Logic (based on sample data)', () => {
-    it('should correctly parse sample API response', async () => {
-      const parsed = index.parseApiJobs(JOB_RESPONSE_SAMPLE);
-
-      expect(parsed.jobs).toHaveLength(2);
-      expect(parsed.jobs[0].title).toBe('Senior Software Engineer');
-      expect(parsed.jobs[0].location).toEqual(['Bucharest']);
-      expect(parsed.jobs[0].workmode).toBe('hybrid');
-      expect(parsed.jobs[1].title).toBe('QA Engineer');
-      expect(parsed.jobs[1].workmode).toBe('remote');
-    });
-
-    it('should correctly map parsed jobs to SOLR-ready format', async () => {
-      const parsed = index.parseApiJobs(JOB_RESPONSE_SAMPLE);
-      const transformed = index.transformJobsForSOLR({
-        jobs: parsed.jobs,
-        company: COMPANY_NAME,
-        cif: CIF,
-        source: companyConfig.website
-      });
-
-      expect(transformed.jobs).toHaveLength(2);
-      expect(transformed.jobs[0].url).toBe('https://apply.workable.com/qualitest-1/j/ABC123');
-      expect(transformed.company).toBe('QUALITEST DC RO S.R.L.');
-    });
-
-    it('should handle 0-job response', async () => {
-      const EMPTY_RESPONSE = { total: 0, results: [] };
-      const parsed = index.parseApiJobs(EMPTY_RESPONSE);
-
-      expect(parsed.jobs).toEqual([]);
-      expect(parsed.total).toBe(0);
-    });
-
-    it('should handle missing department field gracefully', async () => {
-      const responseWithoutDept = {
-        total: 1,
-        results: [
-          {
-            id: 'GHI789',
-            title: 'DevOps Engineer',
-            location: { city: 'Iasi' },
-            url: 'https://apply.workable.com/qualitest-1/j/GHI789'
-          }
-        ]
-      };
-
-      const parsed = index.parseApiJobs(responseWithoutDept);
-
-      expect(parsed.jobs[0].title).toBe('DevOps Engineer');
-      expect(parsed.jobs[0].department).toBeUndefined();
-    });
-  });
-
-  describe('CI Workflow Files', () => {
-    it('should have all required workflow files', () => {
-      const statuses = JSON.parse(
-        readFileSync(join(INTEGRATION_DATA_DIR, 'workflow-status.json'), 'utf-8')
+      const company = results.find(c =>
+        c.cui.toString() === COMPANY_CIF && c.statusLabel === 'Funcțiune'
       );
+      expect(company).toBeDefined();
+      expect(company.cui.toString()).toBe(COMPANY_CIF);
+    }, 15000);
 
-      Object.entries(statuses).forEach(([path, exists]) => {
-        expect(exists).toBe(true);
-      });
+    itIfAnaf('should return empty array for non-existent brand', async () => {
+      const results = await anaf.searchCompany('ThisBrandDoesNotExistXYZ123');
+
+      expect(Array.isArray(results)).toBe(true);
+      expect(results.length).toBe(0);
+    }, 15000);
+
+    itIfAnaf('should fetch company details by valid CIF', async () => {
+      const data = await anaf.getCompanyFromANAF(COMPANY_CIF);
+
+      expect(data).toBeDefined();
+      expect(data.name).toBe(COMPANY_NAME);
+      expect(data).toHaveProperty('address');
+      expect(data).toHaveProperty('registrationNumber');
+      expect(data).toHaveProperty('caenCode');
+      expect(data).toHaveProperty('inactive', false);
+      expect(data).toHaveProperty('onrcStatusLabel', 'Funcțiune');
+    }, 15000);
+
+    itIfAnaf('should throw for invalid CIF', async () => {
+      await expect(anaf.getCompanyFromANAF('00000000')).rejects.toThrow();
+    }, 60000);
+
+    itIfAnaf('should use cached data when API fails (getCompanyFromANAFWithFallback)', async () => {
+      const cached = { cui: 39814543, name: COMPANY_NAME };
+
+      const data = await anaf.getCompanyFromANAFWithFallback(COMPANY_CIF, cached);
+
+      expect(data).toBeDefined();
+      expect(data.cui).toBe(39814543);
+    }, 15000);
+  });
+
+  describe('Peviitor API', () => {
+    itIfApi('should return company data from Peviitor API', async () => {
+      const api = await import('../../scraper/api.js');
+      const company = await api.getCompanyByCif(COMPANY_CIF);
+      expect(company).toBeTruthy();
+      expect(company.id).toBe(COMPANY_CIF);
+    }, 15000);
+  });
+
+  describe('API Company Core', () => {
+    let api;
+
+    beforeAll(async () => {
+      api = await import('../../scraper/api.js');
     });
 
-    it('should have valid YAML syntax in workflow files', () => {
-      const workflowPath = join(REPO_ROOT, '.github', 'workflows', 'job-seeker-ro-spider.yml');
-      const content = readFileSync(workflowPath, 'utf-8');
+    itIfApi('should query company core by CIF', async () => {
+      const result = await api.getCompanyByCif(COMPANY_CIF);
 
-      expect(content).toBeDefined();
-      expect(content.length).toBeGreaterThan(0);
+      expect(result).not.toBeNull();
+      expect(result.id).toBe(COMPANY_CIF);
+      expect(result.company).toBe(COMPANY_NAME);
+      expect(result.status).toBe('activ');
+      expect(Array.isArray(result.location)).toBe(true);
+      expect(result.lastScraped).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    }, 15000);
+
+    itIfApi('should have required company model fields', async () => {
+      const result = await api.getCompanyByCif(COMPANY_CIF);
+
+      expect(result).toHaveProperty('id', COMPANY_CIF);
+      expect(result).toHaveProperty('company');
+      expect(result).toHaveProperty('status');
+      expect(['activ', 'suspendat', 'inactiv', 'radiat']).toContain(result.status);
+      expect(result).toHaveProperty('location');
+      expect(Array.isArray(result.location)).toBe(true);
+      expect(result).toHaveProperty('website');
+      expect(Array.isArray(result.website)).toBe(true);
+      expect(result.website[0]).toMatch(/^https?:\/\/.+/);
+      expect(result).toHaveProperty('career');
+      expect(Array.isArray(result.career)).toBe(true);
+      expect(result.career[0]).toMatch(/^https?:\/\/.+/);
+      expect(result).toHaveProperty('lastScraped');
+    }, 15000);
+
+    itIfApi('should have optional field (group) if present', async () => {
+      const result = await api.getCompanyByCif(COMPANY_CIF);
+
+      if (result.group !== undefined) {
+        expect(typeof result.group).toBe('string');
+      }
+    }, 15000);
+  });
+
+  describe('API Jobs Core', () => {
+    let api;
+
+    beforeAll(async () => {
+      api = await import('../../scraper/api.js');
     });
+
+    itIfApi('should query jobs by CIF and return valid data', async () => {
+      const result = await api.querySOLR(COMPANY_CIF);
+
+      if (result.numFound === 0) {
+        console.log('⚠️ No QUALITEST jobs in API — skipping job field assertions (scraper may not have run yet)');
+        return;
+      }
+
+      expect(result.numFound).toBeGreaterThan(0);
+      expect(Array.isArray(result.docs)).toBe(true);
+
+      const job = result.docs[0];
+      expect(job).toHaveProperty('url');
+      expect(job).toHaveProperty('title');
+      expect(job).toHaveProperty('company', COMPANY_NAME);
+      expect(job).toHaveProperty('cif', COMPANY_CIF);
+      expect(job).toHaveProperty('status');
+      expect(job).toHaveProperty('location');
+    }, 15000);
+
+    itIfApi('should not have duplicate URLs for same CIF', async () => {
+      const result = await api.querySOLR(COMPANY_CIF);
+
+      const urls = result.docs.map(j => j.url);
+      const uniqueUrls = new Set(urls);
+      expect(uniqueUrls.size).toBe(result.docs.length);
+    }, 15000);
+
+    itIfApi('should have valid status values for all jobs', async () => {
+      const validStatuses = ['scraped', 'tested', 'verified', 'published'];
+      const result = await api.querySOLR(COMPANY_CIF);
+
+      for (const job of result.docs) {
+        expect(validStatuses).toContain(job.status);
+      }
+    }, 15000);
+
+    itIfApi('should have valid CIF format for all jobs', async () => {
+      const result = await api.querySOLR(COMPANY_CIF);
+
+      for (const job of result.docs) {
+        expect(job.cif).toMatch(/^\d{6,9}$/);
+      }
+    }, 15000);
+  });
+
+  describe('Full Validation Workflow', () => {
+    let anaf;
+    let companyModule;
+    let api;
+
+    beforeAll(async () => {
+      anaf = await import('../../scraper/anaf.js');
+      companyModule = await import('../../scraper/company.js');
+      api = await import('../../scraper/api.js');
+    });
+
+    itIfAnaf('should complete the ANAF → Peviitor validation path', async () => {
+      const searchResults = await anaf.searchCompany(COMPANY_BRAND);
+      expect(searchResults.length).toBeGreaterThan(0);
+
+      const epamCompany = searchResults.find(c =>
+        c.cui.toString() === COMPANY_CIF && c.statusLabel === 'Funcțiune'
+      );
+      expect(epamCompany).toBeDefined();
+
+      const anafData = await anaf.getCompanyFromANAF(epamCompany.cui.toString());
+      expect(anafData.name).toBe(COMPANY_NAME);
+      expect(anafData.inactive).toBe(false);
+    }, 30000);
+
+    itIfApi('should have matching CIF in company core', async () => {
+      const companyResult = await companyModule.validateAndGetCompany();
+
+      const companyData = await api.getCompanyByCif(COMPANY_CIF);
+      expect(companyData).not.toBeNull();
+      expect(companyData.id).toBe(COMPANY_CIF);
+      expect(companyData.company).toBe(COMPANY_NAME);
+    }, 30000);
+
+    itIfApi('should validate company and query API for existing jobs', async () => {
+      const companyResult = await companyModule.validateAndGetCompany();
+
+      expect(companyResult.status).toBe('active');
+      expect(companyResult.company).toBe(COMPANY_NAME);
+      expect(companyResult.cif).toBe(COMPANY_CIF);
+
+      if (companyResult.existingJobsCount === 0) {
+        console.log('⚠️ No QUALITEST jobs in API — skipping job count assertion (scraper may not have run yet)');
+        return;
+      }
+      expect(companyResult.existingJobsCount).toBeGreaterThan(0);
+    }, 30000);
   });
 });

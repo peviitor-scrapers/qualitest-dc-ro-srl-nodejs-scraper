@@ -1,18 +1,18 @@
-import { generateJobsMarkdown } from "../../src/markdown-generator.js";
+import { generateJobsMarkdown } from "../../scraper/markdown-generator.js";
 
 const baseCompany = {
   id: "39814543",
   company: "QUALITEST DC RO S.R.L.",
-  brand: "Qualitest",
+  brand: "QUALITEST",
   status: "activ",
   location: ["București"],
   website: ["https://www.qualitestgroup.com"],
   career: ["https://apply.workable.com/qualitest-1/"],
-  lastScraped: "2026-06-22"
+  lastScraped: "2026-06-17"
 };
 
 const baseJob = {
-  url: "https://apply.workable.com/qualitest-1/j/ABC123",
+  url: "https://apply.workable.com/qualitest-1//en/vacancy/123_en",
   title: "Senior Node.js Developer",
   workmode: "hybrid",
   location: ["București"],
@@ -34,7 +34,7 @@ describe("generateJobsMarkdown", () => {
 
     it("includes brand", () => {
       const md = generateJobsMarkdown(baseCompany, []);
-      expect(md).toContain("Qualitest");
+      expect(md).toContain("QUALITEST");
     });
 
     it("includes status", () => {
@@ -54,7 +54,7 @@ describe("generateJobsMarkdown", () => {
 
     it("includes lastScraped date", () => {
       const md = generateJobsMarkdown(baseCompany, []);
-      expect(md).toContain("2026-06-22");
+      expect(md).toContain("2026-06-17");
     });
 
     it("omits optional fields when not present", () => {
@@ -84,7 +84,7 @@ describe("generateJobsMarkdown", () => {
 
     it("includes job URL as markdown link", () => {
       const md = generateJobsMarkdown(baseCompany, [baseJob]);
-      expect(md).toContain("[https://apply.workable.com/qualitest-1/j/ABC123]");
+      expect(md).toContain("[https://apply.workable.com/qualitest-1//en/vacancy/123_en]");
     });
 
     it("includes workmode", () => {
@@ -108,7 +108,7 @@ describe("generateJobsMarkdown", () => {
     });
 
     it("renders multiple jobs", () => {
-      const job2 = { ...baseJob, title: "DevOps Engineer", url: "https://apply.workable.com/qualitest-1/j/DEF456" };
+      const job2 = { ...baseJob, title: "DevOps Engineer", url: "https://apply.workable.com/qualitest-1//en/vacancy/456_en" };
       const md = generateJobsMarkdown(baseCompany, [baseJob, job2]);
       expect(md).toContain("### Senior Node.js Developer");
       expect(md).toContain("### DevOps Engineer");
@@ -116,7 +116,7 @@ describe("generateJobsMarkdown", () => {
     });
 
     it("handles job with no optional fields", () => {
-      const minimal = { url: "https://apply.workable.com/qualitest-1/j/999", title: "QA Engineer" };
+      const minimal = { url: "https://apply.workable.com/qualitest-1//en/vacancy/999_en", title: "QA Engineer" };
       const md = generateJobsMarkdown(baseCompany, [minimal]);
       expect(md).toContain("### QA Engineer");
       expect(md).not.toContain("Work Mode");
@@ -134,6 +134,38 @@ describe("generateJobsMarkdown", () => {
     it("includes a generated timestamp", () => {
       const md = generateJobsMarkdown(baseCompany, []);
       expect(md).toMatch(/_Generated: \d{4}-\d{2}-\d{2}/);
+    });
+  });
+
+  describe("markdown escaping", () => {
+    it("escapes # in job titles", () => {
+      const job = { ...baseJob, title: "C# Developer" };
+      const md = generateJobsMarkdown(baseCompany, [job]);
+      expect(md).toContain("### C\\# Developer");
+    });
+
+    it("escapes * in job titles", () => {
+      const job = { ...baseJob, title: "Full-Stack * Developer" };
+      const md = generateJobsMarkdown(baseCompany, [job]);
+      expect(md).toContain("### Full-Stack \\* Developer");
+    });
+
+    it("escapes [ ] in company name", () => {
+      const company = { ...baseCompany, company: "ACME [Tech] SRL" };
+      const md = generateJobsMarkdown(company, []);
+      expect(md).toContain("# ACME \\[Tech\\] SRL");
+    });
+
+    it("escapes ` in tags", () => {
+      const job = { ...baseJob, tags: ["node.js", "`bash`"] };
+      const md = generateJobsMarkdown(baseCompany, [job]);
+      expect(md).toContain("\\`bash\\`");
+    });
+
+    it("escapes # in location", () => {
+      const job = { ...baseJob, location: ["Building #5"] };
+      const md = generateJobsMarkdown(baseCompany, [job]);
+      expect(md).toContain("Building \\#5");
     });
   });
 });
