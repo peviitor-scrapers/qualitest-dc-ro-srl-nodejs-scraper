@@ -10,6 +10,7 @@ import scraperConfig from "./config/scraper.js";
 const COMPANY_CIF = companyConfig.id;
 const JOB_BASE = scraperConfig.apiBase;
 const ACCOUNT = scraperConfig.apiAccount;
+const SEARCH_QUERY = scraperConfig.searchQuery;
 
 const TIMEOUT = 10000;
 
@@ -59,68 +60,91 @@ async function searchANOFM(cif) {
 }
 
 async function fetchJobsPage(pageNum) {
-  const url = `${JOB_BASE}/api/v3/accounts/${ACCOUNT}/jobs`;
-  const body = {
-    query: "",
-    department: [],
-    location: [],
-    workplace: [],
-    worktype: []
-  };
+  const startrow = (pageNum - 1) * 25;
+  const url = `${JOB_BASE}/jobs/search?q=${encodeURIComponent(SEARCH_QUERY)}&searchby=location&startrow=${startrow}`;
   const res = await fetch(url, {
-    method: "POST",
+    method: "GET",
     headers: {
-      "Content-Type": "application/json",
-      "Accept": "application/json",
-      "Referer": `https://apply.workable.com/${ACCOUNT}/`,
-      "Origin": JOB_BASE,
+      "Accept": "text/html,application/xhtml+xml",
+      "Referer": JOB_BASE,
       "User-Agent": "job_seeker_ro_spider"
-    },
-    body: JSON.stringify(body)
+    }
   });
   if (!res.ok) {
-    throw new Error(`Workable API error ${res.status} for page=${pageNum}`);
+    throw new Error(`QualityAI search error ${res.status} for page=${pageNum}`);
   }
-  return await res.json();
+  return await res.text();
 }
 
-function parseApiJobs(apiData) {
-  const jobs = apiData.results || [];
-  const total = apiData.total || 0;
+const decodeEntities = (str) => String(str || "")
+  .replace(/&amp;/g, "&")
+  .replace(/&lt;/g, "<")
+  .replace(/&gt;/g, ">")
+  .replace(/&quot;/g, "\"")
+  .replace(/&#x27;/g, "'")
+  .replace(/&#39;/g, "'");
 
-  return {
-    jobs: jobs.map(job => {
-      let workmode = "hybrid";
-      const workplace = (job.workplace || "").toLowerCase();
-      if (workplace.includes("remote")) workmode = "remote";
-      else if (workplace.includes("office") || workplace.includes("on-site")) workmode = "on-site";
+const slugToWorkmode = (slug) => {
+  const lower = slug.toLowerCase();
+  if (lower.includes("remote")) return "remote";
+  if (lower.includes("hybrid") || lower.includes("hibrid")) return "hybrid";
+  return "on-site";
+};
 
-      const location = [];
-      if (job.location) {
-        if (job.location.city) location.push(job.location.city);
-        else if (job.location.country) location.push(job.location.country);
-      }
+function parsePageJobs(html) {
+  const jobs = [];
+  const rowRe = /<tr class="data-row">([\s\S]*?)<\/tr>/g;
+  const linkRe = /href="(\/job\/[^"]+)?"[^>]*>\s*([^<]+)</g;
 
-      return {
-        url: job.url || `https://apply.workable.com/${ACCOUNT}/j/${job.id}`,
-        title: job.title,
-        uid: job.id,
-        workmode,
-        location,
-        tags: []
-      };
-    }),
-    total
-  };
+  let row;
+  while ((row = rowRe.exec(html)) !== null) {
+    const rowHtml = row[1];
+    const link = linkRe.exec(rowHtml);
+    if (!link) {
+      linkRe.lastIndex = 0;
+      continue;
+    }
+    linkRe.lastIndex = 0;
+    const href = decodeEntities(link[1]);
+    const title = decodeEntities(link[2]).trim();
+
+    const locationMatch = rowHtml.match(/<span class="jobLocation">\s*([^<]+)</);
+    const location = locationMatch ? decodeEntities(locationMatch[1]).trim() : "";
+
+    const city = location
+      .split(",")[0]
+      .trim()
+      .replace(/ Bucharest$/i, "")
+      .trim()
+      .replace(/^Bucharest$/i, "București");
+
+    const idMatch = href.match(/\/(\d{6,})\/?$/);
+    const uid = idMatch ? idMatch[1] : null;
+
+    jobs.push({
+      url: `${JOB_BASE}${href}`,
+      title,
+      uid,
+      workmode: slugToWorkmode(href),
+      location: city ? [city] : [],
+      tags: []
+    });
+  }
+
+  const totalMatch = html.match(/of\s+<b>([\d,]+)<\/b>/);
+  const total = totalMatch ? parseInt(totalMatch[1].replace(/,/g, ""), 10) : jobs.length;
+
+  return { jobs, total };
 }
 
 async function scrapeAllListings(testOnlyOnePage = false) {
   const allJobs = [];
   const seenUrls = new Set();
 
-  console.log(`Fetching Workable jobs...`);
-  const data = await fetchJobsPage(1);
-  const { jobs } = parseApiJobs(data);
+  console.log(`Fetching QualityAI jobs (search: ${SEARCH_QUERY})...`);
+  const page = 1;
+  const html = await fetchJobsPage(page);
+  const { jobs, total } = parsePageJobs(html);
 
   let newJobs = 0;
   for (const job of jobs) {
@@ -130,7 +154,7 @@ async function scrapeAllListings(testOnlyOnePage = false) {
       newJobs++;
     }
   }
-  console.log(`Total unique jobs collected: ${allJobs.length}`);
+  console.log(`Total unique jobs collected: ${allJobs.length} / ${total}`);
 
   if (testOnlyOnePage) {
     console.log("Test mode: single page.");
@@ -246,7 +270,7 @@ async function main() {
 
     const rawJobs = await scrapeAllListings(testOnlyOnePage);
     const scrapedCount = rawJobs.length;
-    console.log(`Jobs scraped from Workable website: ${scrapedCount}`);
+    console.log(`Jobs scraped from QualityAI website: ${scrapedCount}`);
 
     if (!testOnlyOnePage) {
       const anofmJobs = await searchANOFM(cif);
@@ -331,7 +355,7 @@ async function main() {
     const finalResult = await querySOLR(COMPANY_CIF);
     console.log(`\n=== SUMMARY ===`);
     console.log(`Jobs existing in SOLR before scrape: ${existingCount}`);
-    console.log(`Jobs scraped from Workable website: ${scrapedCount}`);
+    console.log(`Jobs scraped from QualityAI website: ${scrapedCount}`);
     console.log(`Stale jobs attempted: ${staleUrls.length}`);
     console.log(`Jobs in SOLR after scrape: ${finalResult.numFound}`);
     console.log(`====================`);
@@ -345,7 +369,7 @@ async function main() {
   }
 }
 
-export { parseApiJobs, mapToJobModel, transformJobsForSOLR };
+export { parsePageJobs, mapToJobModel, transformJobsForSOLR };
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   main();

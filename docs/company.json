@@ -1,10 +1,10 @@
 {
-  "id": "39814543",
-  "company": "QUALITEST DC RO S.R.L.",
+  "id": "50823992",
+  "company": "QUALITEST S.R.L.",
   "brand": "QUALITEST",
   "status": "activ",
-  "location": ["București"],
-  "website": ["https://www.qualitestgroup.com"],
-  "career": ["https://apply.workable.com/qualitest-1/"],
-  "scraperFile": "https://github.com/peviitor-scrapers/qualitest-dc-ro-srl-nodejs-scraper/actions/workflows/job-seeker-ro-spider.yml"
+  "location": ["Craiova"],
+  "website": ["https://www.qualitest.com"],
+  "career": ["https://careers.quality-ai.com/"],
+  "scraperFile": "https://github.com/peviitor-scrapers/qualitest-srl-nodejs-scraper/actions/workflows/job-seeker-ro-spider.yml"
 }

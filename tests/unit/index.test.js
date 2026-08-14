@@ -62,17 +62,17 @@ describe('index.js Component Tests', () => {
 
     it('should keep company uppercase', () => {
       const payload = {
-        source: 'apply.workable.com',
-        company: 'qualitest dc ro srl',
-        cif: '39814543',
+        source: 'careers.quality-ai.com',
+        company: 'qualitest srl',
+        cif: '50823992',
         jobs: [
-          { url: 'https://test.com/1', title: 'Job 1', company: 'qualitest dc ro', cif: '39814543' }
+          { url: 'https://test.com/1', title: 'Job 1', company: 'qualitest srl', cif: '50823992' }
         ]
       };
 
       const result = index.transformJobsForSOLR(payload);
 
-      expect(result.company).toBe('QUALITEST DC RO SRL');
+      expect(result.company).toBe('QUALITEST SRL');
     });
 
     it('should normalize workmode values', () => {
@@ -102,15 +102,15 @@ describe('index.js Component Tests', () => {
   describe('mapToJobModel', () => {
     it('should map raw job to job model format', () => {
       const rawJob = {
-        url: 'https://apply.workable.com/job/123',
+        url: 'https://careers.quality-ai.com/job/123',
         title: 'Senior Developer',
         location: ['Bucharest'],
         tags: ['Java', 'Spring'],
         workmode: 'hybrid'
       };
 
-      const COMPANY_NAME = 'QUALITEST DC RO S.R.L.';
-      const COMPANY_CIF = '39814543';
+      const COMPANY_NAME = 'QUALITEST S.R.L.';
+      const COMPANY_CIF = '50823992';
 
       const result = index.mapToJobModel(rawJob, COMPANY_CIF, COMPANY_NAME);
 
@@ -131,7 +131,7 @@ describe('index.js Component Tests', () => {
         title: 'Job 1'
       };
 
-      const result = index.mapToJobModel(rawJob, '39814543');
+      const result = index.mapToJobModel(rawJob, '50823992');
 
       expect(result.location).toBeUndefined();
       expect(result.tags).toBeUndefined();
@@ -141,72 +141,84 @@ describe('index.js Component Tests', () => {
     it('should handle missing title', () => {
       const rawJob = { url: 'https://test.com/1' };
 
-      const result = index.mapToJobModel(rawJob, '39814543');
+      const result = index.mapToJobModel(rawJob, '50823992');
 
       expect(result.title).toBeUndefined();
       expect(result.url).toBe('https://test.com/1');
     });
   });
 
-  describe('parseApiJobs', () => {
-    const sampleApiData = {
-      results: [
-        {
-          id: "123",
-          title: "Senior Developer",
-          url: "https://apply.workable.com/qualitest-1/j/123",
-          workplace: "Remote",
-          location: { city: "Bucharest", country: "Romania" }
-        },
-        {
-          id: "456",
-          title: "Backend Engineer",
-          url: "https://apply.workable.com/qualitest-1/j/456",
-          workplace: "On-site",
-          location: { city: "Cluj-Napoca", country: "Romania" }
-        }
-      ],
-      total: 17
-    };
+  describe('parsePageJobs', () => {
+    const sampleHtml = `
+<table>
+  <tr class="data-row">
+    <td class="colTitle" headers="hdrTitle">
+      <span class="jobTitle hidden-phone">
+        <a href="/job/Bucharest-Senior-Embedded-Engineer/57481544/" class="jobTitle-link">Senior Embedded Engineer</a>
+      </span>
+      <span class="jobLocation">Bucharest, RO</span>
+    </td>
+  </tr>
+  <tr class="data-row">
+    <td class="colTitle" headers="hdrTitle">
+      <span class="jobTitle hidden-phone">
+        <a href="/job/Bucharest-Senior-C-Developer-%28Hybrid%29/56575644/" class="jobTitle-link">Senior C# Developer (Hybrid)</a>
+      </span>
+      <span class="jobLocation">Bucharest, RO</span>
+    </td>
+  </tr>
+</table>
+<div class="pagination-label-row">
+  <span class="paginationLabel" aria-label="Results 1 - 25">Results <b>1 - 25</b> of <b>25</b></span>
+</div>`;
 
-    it('should parse Workable API results', () => {
-      const result = index.parseApiJobs(sampleApiData);
+    it('should parse QualityAI search HTML results', () => {
+      const result = index.parsePageJobs(sampleHtml);
 
-      expect(result.total).toBe(17);
+      expect(result.total).toBe(25);
       expect(result.jobs).toHaveLength(2);
 
       const first = result.jobs[0];
-      expect(first.title).toBe('Senior Developer');
-      expect(first.url).toMatch(/^https:\/\/apply\.workable\.com\//);
-      expect(first.location).toEqual(['Bucharest']);
-      expect(first.workmode).toBe('remote');
+      expect(first.title).toBe('Senior Embedded Engineer');
+      expect(first.url).toBe('https://careers.quality-ai.com/job/Bucharest-Senior-Embedded-Engineer/57481544/');
+      expect(first.location).toEqual(['București']);
+      expect(first.workmode).toBe('on-site');
+      expect(first.uid).toBe('57481544');
 
       const second = result.jobs[1];
-      expect(second.title).toBe('Backend Engineer');
-      expect(second.location).toEqual(['Cluj-Napoca']);
-      expect(second.workmode).toBe('on-site');
+      expect(second.title).toBe('Senior C# Developer (Hybrid)');
+      expect(second.workmode).toBe('hybrid');
     });
 
     it('should handle empty results', () => {
-      const result = index.parseApiJobs({ results: [], total: 0 });
+      const result = index.parsePageJobs('<table></table>');
 
       expect(result.jobs).toEqual([]);
       expect(result.total).toBe(0);
     });
 
     it('should handle missing data', () => {
-      const result = index.parseApiJobs({});
+      const result = index.parsePageJobs('');
 
       expect(result.jobs).toEqual([]);
     });
 
-    it('should fall back to constructed URL when url is missing', () => {
-      const data = { results: [{ id: "999", title: "QA Engineer", workplace: "Hybrid" }], total: 1 };
-      const result = index.parseApiJobs(data);
+    it('should detect remote jobs from slug', () => {
+      const html = `
+<table>
+  <tr class="data-row">
+    <td class="colTitle" headers="hdrTitle">
+      <span class="jobTitle hidden-phone">
+        <a href="/job/Bucharest-Devops-Engineer-Remote/99999944/" class="jobTitle-link">DevOps Engineer</a>
+      </span>
+      <span class="jobLocation">Bucharest, RO</span>
+    </td>
+  </tr>
+</table>`;
+      const result = index.parsePageJobs(html);
 
-      expect(result.jobs[0].url).toBe('https://apply.workable.com/qualitest-1/j/999');
-      expect(result.jobs[0].location).toEqual([]);
-      expect(result.jobs[0].workmode).toBe('hybrid');
+      expect(result.jobs[0].workmode).toBe('remote');
+      expect(result.jobs[0].uid).toBe('99999944');
     });
   });
 });

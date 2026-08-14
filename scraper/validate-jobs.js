@@ -135,8 +135,8 @@ Usage:
   node validate-jobs.js --file <file.json>       - Check URLs from JSON file
 
 Examples:
-  node validate-jobs.js 39814543                 - Validate Qualitest jobs
-  node validate-jobs.js --url "https://apply.workable.com/qualitest-1/jobs/123_test"
+  node validate-jobs.js 50823992                 - Validate Qualitest jobs
+  node validate-jobs.js --url "https://careers.quality-ai.com/job/Test/123_test"
   node validate-jobs.js --urls "url1" "url2" "url3"
   node validate-jobs.js --file jobs.json
 `;

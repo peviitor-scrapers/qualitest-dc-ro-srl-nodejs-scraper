@@ -3,8 +3,8 @@
   "source": "ANAF",
   "brand": "QUALITEST",
   "anaf": {
-    "cui": 39814543,
-    "name": "QUALITEST DC RO S.R.L.",
+    "cui": 50823992,
+    "name": "QUALITEST S.R.L.",
     "address": "PIPERA, 43, Bucureşti Sectorul 2, Bucureşti",
     "caenCode": "6210",
     "inactive": false,
@@ -14,8 +14,8 @@
   },
   "peviitor": null,
   "summary": {
-    "company": "QUALITEST DC RO S.R.L.",
-    "cif": "39814543",
+    "company": "QUALITEST S.R.L.",
+    "cif": "50823992",
     "active": true,
     "address": "PIPERA, 43, Bucureşti Sectorul 2, Bucureşti",
     "registrationNumber": "J2021008222407",

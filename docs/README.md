@@ -1,8 +1,8 @@
 # job_seeker_ro_spider
 
-**job_seeker_ro_spider** — scraper pentru job-urile QUALITEST DC RO S.R.L. din România.
+**job_seeker_ro_spider** — scraper pentru job-urile QUALITEST S.R.L. din România.
 
-Extrage anunțurile de pe [Qualitest Workable](https://apply.workable.com/qualitest-1/) și le publică în [peviitor.ro](https://peviitor.ro) prin API-ul Peviitor.
+Extrage anunțurile de pe [QualityAI Careers](https://careers.quality-ai.com/) și le publică în [peviitor.ro](https://peviitor.ro) prin API-ul Peviitor.
 
 ## Identificare
 
@@ -14,12 +14,12 @@ job_seeker_ro_spider
 
 ## Ce face
 
-1. **Validează compania** — interoghează API-ul public ANAF ([demoanaf.ro](https://demoanaf.ro)) după CIF-ul 39814543 și verifică:
-   - Denumirea oficială: QUALITEST DC RO S.R.L.
+1. **Validează compania** — interoghează API-ul public ANAF ([demoanaf.ro](https://demoanaf.ro)) după CIF-ul 50823992 și verifică:
+   - Denumirea oficială: QUALITEST S.R.L.
    - Status: activ/inactiv/radiat
    - Adresa completă din registrul comerțului
 2. **Cross-validează cu Peviitor** — verifică existența companiei în API-ul Peviitor
-3. **Scrape-uiește job-urile** — extrage lista completă de job-uri din API-ul public Workable (POST `/api/v3/accounts/qualitest-1/jobs`)
+3. **Scrape-uiește job-urile** — extrage lista completă de job-uri din paginile SSR HTML de search (`/jobs/search?q=Bucharest`)
 4. **Transformă datele** — normalizează locațiile (doar orașe românești), tag-urile (lowercase), workmode-ul (remote/on-site/hybrid)
 5. **Stochează prin Peviitor API** — upsert pentru job-uri și datele companiei
 6. **Generează docs/jobs.md** — fișier markdown cu informații companie + toate job-urile curente, publicat pe GitHub Pages
@@ -31,7 +31,7 @@ job_seeker_ro_spider
 │   ├── config/company.json         # Sursa unică de adevăr (id, brand, URL-uri)
 │   ├── config/company.js           # Loader ESM pentru config/company.json
 │   ├── config/scraper.json         # Config scraper (apiBase, apiAccount)
-│   ├── index.js                    # Orchestrator principal (Workable API scraping)
+│   ├── index.js                    # Orchestrator principal (QualityAI SSR HTML scraping)
 │   ├── company.js                  # Validare companie (ANAF + Peviitor)
 │   ├── anaf.js                     # Modul ANAF API
 │   ├── api.js                      # Operații Peviitor API (query, upsert, delete)
@@ -48,7 +48,7 @@ job_seeker_ro_spider
 ├── tests/
 │   ├── unit/                       # Teste unitare
 │   ├── integration/                # Teste de integrare (ANAF + Peviitor live)
-│   ├── e2e/                        # Teste end-to-end (Workable API real)
+│   ├── e2e/                        # Teste end-to-end (QualityAI search HTML real)
 │   └── consistency/                # Teste config repo
 └── .github/workflows/
     ├── job-seeker-ro-spider.yml    # Rulează zilnic la 6 AM UTC
@@ -60,14 +60,14 @@ job_seeker_ro_spider
 
 | API | URL | Autentificare |
 |---|---|---|
-| Workable Jobs | `https://apply.workable.com/api/v3/accounts/qualitest-1/jobs` | Public (POST JSON) |
+ QualityAI Jobs | `https://careers.quality-ai.com/jobs/search?q=Bucharest&searchby=location` | Public (HTML) 
 | ANAF (demoanaf) | `https://demoanaf.ro/api/...` | Public |
 | ANOFM | `https://mediere.anofm.ro/api/entity/vw_public_job_posting` | Public |
 | Peviitor | `https://api.peviitor.ro/v1` | Public (fără auth) |
 
 ## Robots.txt
 
-Workable [robots.txt](https://apply.workable.com/robots.txt) permite tot (`Disallow:` gol, `Content-Signal: ai-input=yes`). Scraper-ul face o singură cerere la API per scrape.
+QualityAI [robots.txt](https://careers.quality-ai.com/robots.txt) permite `/jobs/` (doar `/applybutton/`, `/talentcommunity/`, `/preapply/` sunt disallowed). Scraper-ul face o singură cerere la search per scrape.
 
 Pentru analiza completă, vezi [ROBOTS.md](../ai/ROBOTS.md).
 
@@ -83,7 +83,7 @@ npm run test:unit
 # Doar integrare (ANAF live, Peviitor conditional)
 npm run test:integration
 
-# Doar E2E (Workable API real + ANAF + Peviitor)
+# Doar E2E (QualityAI search HTML real + ANAF + Peviitor)
 npm run test:e2e
 ```
 

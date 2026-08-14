@@ -4,7 +4,7 @@
 
 This scraper extracts job listings from Qualitest Careers Romania API and imports them to peviitor.ro.
 
-Target: https://apply.workable.com/qualitest-1
+Target: https://careers.quality-ai.com
 
 ## Model Schemas
 
@@ -100,7 +100,7 @@ company.js (validate company)
     └── SOLR ──► check existing jobs count
     │
     ▼ (if active)
-scrape Workable API (jobs for Romania)
+scrape QualityAI search HTML (jobs for Romania)
     │
     ▼
 transformJobsForSOLR()
@@ -130,7 +130,7 @@ generateJobsMarkdown() → docs/jobs.md
 | `scraper/validate-jobs.js` | Manual deep validator (content-aware); thin CLI wrapper over `scraper/job-validator.js` |
 | `scraper/job-validator.js` | Shared validation primitives: `validateByHead`, `validateByContent`, `DEFAULT_EXPIRED_KEYWORDS` |
 | `scraper/markdown-generator.js` | Generates `docs/jobs.md` with company info and all scraped jobs |
-| `tests/unit/index.test.js` | Unit tests for parseApiJobs, mapToJobModel, transformJobsForSOLR |
+| `tests/unit/index.test.js` | Unit tests for parsePageJobs, mapToJobModel, transformJobsForSOLR |
 | `tests/unit/company.test.js` | Unit tests for validateAndGetCompany and fallback caching |
 | `tests/unit/api.test.js` | Unit tests for api.js - query, upsert, delete, HTTP error handling |
 | `tests/unit/demoanaf.test.js` | Unit tests for anaf.js - ANAF search and company retrieval |
@@ -148,7 +148,7 @@ generateJobsMarkdown() → docs/jobs.md
 - **CUIScan**: `https://cuiscan.ro/api.php?action=company&cui=CIF` - Company details fallback
 - **CUIFirma Search**: `https://cuifirma.ro/api/search?q=BRAND` - Search fallback
 - **Peviitor API**: `https://api.peviitor.ro/v1/` — all job and company operations go through this API
-- **Qualitest Workable API**: `POST https://apply.workable.com/api/v3/accounts/qualitest-1/jobs` — POST with JSON payload (query, department, location, workplace, worktype)
+- **QualityAI Careers**: `GET https://careers.quality-ai.com/jobs/search?q=Bucharest&searchby=location` — SSR HTML with job links
 
 ## Rate Limiting & Politeness
 

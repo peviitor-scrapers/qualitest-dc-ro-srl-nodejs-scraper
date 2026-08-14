@@ -99,12 +99,12 @@ describe('Integration: API Workflow', () => {
     }, 60000);
 
     itIfAnaf('should use cached data when API fails (getCompanyFromANAFWithFallback)', async () => {
-      const cached = { cui: 39814543, name: COMPANY_NAME };
+      const cached = { cui: 50823992, name: COMPANY_NAME };
 
       const data = await anaf.getCompanyFromANAFWithFallback(COMPANY_CIF, cached);
 
       expect(data).toBeDefined();
-      expect(data.cui).toBe(39814543);
+      expect(data.cui).toBe(50823992);
     }, 15000);
   });
 

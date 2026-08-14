@@ -1,32 +1,25 @@
 {
-  "validatedAt": "2026-08-14T18:25:59.989Z",
+  "validatedAt": "2026-08-14T18:55:25.801Z",
   "source": "ANAF",
   "brand": "QUALITEST",
   "anaf": {
-    "cui": 39814543,
-    "name": "QUALITEST DC RO S.R.L.",
-    "address": "MUNICIPIUL BUCUREŞTI, SECTOR 2, STR GARA HERĂSTRĂU, NR.6, ET.14 SI 15",
-    "registrationNumber": "J2018012434403",
-    "phone": "",
+    "cui": 50823992,
+    "name": "QUALITEST S.R.L.",
+    "address": "JUD. DOLJ, MUN. CRAIOVA, ALEEA 1 CASTANILOR, NR.2A, BL.65A1, SC.2, ET.1, AP.4",
+    "registrationNumber": "J2024037987006",
+    "phone": "+40736895149",
     "fax": "",
-    "postalCode": "20334",
-    "caenCode": "6210",
+    "postalCode": "",
+    "caenCode": "6201",
     "iban": "",
-    "registrationState": "TRANSFER(SOSIRE) din data 03.10.2019",
-    "registrationDate": "2018-08-31",
-    "fiscalAuthority": "Direcţia Generală a Finanţelor Publice Municipiul Bucureşti",
-    "ownershipForm": "PROPR.PRIVATA-CAPITAL PRIVAT STRAIN",
+    "registrationState": "INREGISTRAT din data 05.11.2024",
+    "registrationDate": "2024-11-05",
+    "fiscalAuthority": "Administraţia Judeţeană a Finanţelor Publice Dolj",
+    "ownershipForm": "PROPR.PRIVATA-CAPITAL PRIVAT AUTOHTON",
     "organizationForm": "PERSOANA JURIDICA",
     "legalForm": "SOCIETATE COMERCIALĂ CU RĂSPUNDERE LIMITATĂ",
-    "vatRegistered": true,
-    "vatPeriods": [
-      {
-        "start": "2018-12-01",
-        "end": null,
-        "yearStart": "",
-        "message": ""
-      }
-    ],
+    "vatRegistered": false,
+    "vatPeriods": [],
     "cashBasisVat": false,
     "cashBasisVatStart": null,
     "cashBasisVatEnd": null,
@@ -36,12 +29,12 @@
     "splitVat": false,
     "eFacturaRegistered": false,
     "headquartersAddress": {
-      "street": "Str. Gara Herăstrău",
-      "number": "6",
-      "locality": "Sector 2 Mun. Bucureşti",
-      "county": "MUNICIPIUL BUCUREŞTI",
+      "street": "Aleea 1 Castanilor",
+      "number": "2A",
+      "locality": "Mun. Craiova",
+      "county": "DOLJ",
       "country": "",
-      "postalCode": "20334"
+      "postalCode": ""
     },
     "fiscalAddress": {
       "street": "",
@@ -53,20 +46,19 @@
     },
     "administrators": [
       {
-        "name": "SHAI LIBERMAN",
+        "name": "Dorobanțu Elena-Bianca",
         "role": "administrator"
       }
     ],
     "authorizedCaenCodes": [
-      "4619",
-      "5821",
       "5829",
-      "6020",
-      "6039",
-      "6210",
-      "6220",
-      "6290",
-      "6310"
+      "6201",
+      "6202",
+      "6203",
+      "6209",
+      "6311",
+      "6312",
+      "6399"
     ],
     "onrcStatus": 0,
     "onrcStatusLabel": "Funcțiune"
@@ -97,10 +89,10 @@
     "_root_": "50823992"
   },
   "summary": {
-    "company": "QUALITEST DC RO S.R.L.",
-    "cif": "39814543",
+    "company": "QUALITEST S.R.L.",
+    "cif": "50823992",
     "active": true,
     "inactiveSince": null,
-    "address": "MUNICIPIUL BUCUREŞTI, SECTOR 2, STR GARA HERĂSTRĂU, NR.6, ET.14 SI 15"
+    "address": "JUD. DOLJ, MUN. CRAIOVA, ALEEA 1 CASTANILOR, NR.2A, BL.65A1, SC.2, ET.1, AP.4"
   }
 }

@@ -49,19 +49,16 @@ import scraperConfig from '../../scraper/config/scraper.js';
 const TEST_CIF = companyConfig.id;
 const TEST_BRAND = companyConfig.brand;
 const COMPANY_NAME = companyConfig.company;
-const WORKABLE_API_URL = `${scraperConfig.apiBase}/api/v3/accounts/${scraperConfig.apiAccount}/jobs`;
+const SEARCH_URL = `${scraperConfig.apiBase}/jobs/search?q=${encodeURIComponent(scraperConfig.searchQuery)}&searchby=location`;
 
-async function fetchWorkableJobs() {
-  const res = await fetch(WORKABLE_API_URL, {
-    method: 'POST',
+async function fetchQualityAiJobs() {
+  const res = await fetch(SEARCH_URL, {
+    method: 'GET',
     headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'Referer': `https://apply.workable.com/${scraperConfig.apiAccount}/`,
-      'Origin': scraperConfig.apiBase,
+      'Accept': 'text/html,application/xhtml+xml',
+      'Referer': scraperConfig.apiBase,
       'User-Agent': 'job_seeker_ro_spider'
-    },
-    body: JSON.stringify({ query: '', department: [], location: [], workplace: [], worktype: [] })
+    }
   });
   return res;
 }
@@ -72,60 +69,45 @@ beforeAll(async () => {
 
 describe('E2E: Full Scraping Pipeline', () => {
 
-  describe('Workable API — Real Data Fetch', () => {
-    let apiData;
+  describe('QualityAI — Real Data Fetch', () => {
+    let html;
 
     beforeAll(async () => {
-      const res = await fetchWorkableJobs();
-      apiData = await res.json();
+      const res = await fetchQualityAiJobs();
+      html = await res.text();
     }, 15000);
 
-    it('should respond with valid JSON containing job results', () => {
-      expect(apiData).toBeDefined();
-      expect(Array.isArray(apiData.results)).toBe(true);
-      if (apiData.total === 0) {
-        console.log('⚠️ Qualitest currently has 0 open jobs on Workable — skipping count assertion');
-        return;
-      }
-      expect(apiData.total).toBeGreaterThan(0);
+    it('should respond with valid HTML containing job results', () => {
+      expect(html).toBeDefined();
+      expect(html.length).toBeGreaterThan(0);
+      expect(html).toContain('data-row');
     }, 10000);
 
-    it('should contain job titles in the results', () => {
-      if (!apiData.results || apiData.results.length === 0) {
-        console.log('⚠️ Qualitest currently has 0 open jobs on Workable — skipping title assertion');
-        return;
-      }
-      for (const job of apiData.results.slice(0, 3)) {
-        expect(job.title).toBeDefined();
-        expect(job.title.length).toBeGreaterThan(0);
-      }
+    it('should contain job links', () => {
+      expect(html).toMatch(/\/job\/[A-Za-z0-9-]+(?:\/)?/);
     });
   });
 
   describe('Parse + Transform Pipeline', () => {
     let index;
-    let apiData;
+    let html;
 
     beforeAll(async () => {
       index = await import('../../scraper/index.js');
-      const res = await fetchWorkableJobs();
-      apiData = await res.json();
+      const res = await fetchQualityAiJobs();
+      html = await res.text();
     }, 15000);
 
-    it('should parse real Workable API into standardized format', () => {
-      const result = index.parseApiJobs(apiData);
+    it('should parse real QualityAI search HTML into standardized format', () => {
+      const result = index.parsePageJobs(html);
 
       expect(result).toHaveProperty('jobs');
       expect(result).toHaveProperty('total');
-      if (result.jobs.length === 0) {
-        console.log('⚠️ Qualitest currently has 0 open jobs on Workable — skipping parse assertions');
-        return;
-      }
       expect(result.jobs.length).toBeGreaterThan(0);
 
       const parsed = result.jobs[0];
       expect(parsed).toHaveProperty('url');
-      expect(parsed.url).toMatch(/^https:\/\/apply\.workable\.com\//);
+      expect(parsed.url).toMatch(/^https:\/\/careers\.quality-ai\.com\//);
       expect(parsed).toHaveProperty('title');
       expect(parsed).toHaveProperty('workmode');
       expect(['remote', 'on-site', 'hybrid']).toContain(parsed.workmode);
@@ -134,11 +116,7 @@ describe('E2E: Full Scraping Pipeline', () => {
     });
 
     it('should map parsed jobs to job model', () => {
-      const parsed = index.parseApiJobs(apiData);
-      if (parsed.jobs.length === 0) {
-        console.log('⚠️ Qualitest currently has 0 open jobs on Workable — skipping map assertions');
-        return;
-      }
+      const parsed = index.parsePageJobs(html);
       const model = index.mapToJobModel(parsed.jobs[0], TEST_CIF);
 
       expect(model).toHaveProperty('url');
@@ -147,11 +125,11 @@ describe('E2E: Full Scraping Pipeline', () => {
       expect(model).toHaveProperty('cif', TEST_CIF);
       expect(model).toHaveProperty('status', 'scraped');
       expect(model).toHaveProperty('date');
-      expect(model.url).toMatch(/^https:\/\/apply\.workable\.com\//);
+      expect(model.url).toMatch(/^https:\/\/careers\.quality-ai\.com\//);
     });
 
     it('should transform jobs and filter to Romanian locations', () => {
-      const parsed = index.parseApiJobs(apiData);
+      const parsed = index.parsePageJobs(html);
       const jobs = parsed.jobs.map(j => index.mapToJobModel(j, TEST_CIF));
 
       const payload = {
@@ -175,11 +153,7 @@ describe('E2E: Full Scraping Pipeline', () => {
     });
 
     it('should produce valid job URLs that are accessible', async () => {
-      const parsed = index.parseApiJobs(apiData);
-      if (parsed.jobs.length === 0) {
-        console.log('⚠️ Qualitest currently has 0 open jobs on Workable — skipping URL assertions');
-        return;
-      }
+      const parsed = index.parsePageJobs(html);
 
       for (const job of parsed.jobs.slice(0, 2)) {
         const res = await fetch(job.url, {

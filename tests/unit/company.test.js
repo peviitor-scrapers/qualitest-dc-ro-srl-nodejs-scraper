@@ -50,8 +50,8 @@ function solrResponse(total, data) {
 }
 
 const QUALITEST_ANAF_RECORD = {
-  cui: 39814543,
-  name: 'QUALITEST DC RO S.R.L.',
+  cui: 50823992,
+  name: 'QUALITEST S.R.L.',
   address: 'PIPERA, 43, Bucureşti Sectorul 2, Bucureşti',
   caenCode: '6210',
   inactive: false,
@@ -86,11 +86,11 @@ describe('company.js', () => {
 
       const result = await company.getCompanyData();
 
-      expect(result).toHaveProperty('company', 'QUALITEST DC RO S.R.L.');
-      expect(result).toHaveProperty('cif', '39814543');
+      expect(result).toHaveProperty('company', 'QUALITEST S.R.L.');
+      expect(result).toHaveProperty('cif', '50823992');
       expect(result).toHaveProperty('active', true);
       expect(result).toHaveProperty('anafData');
-      expect(result.anafData.name).toBe('QUALITEST DC RO S.R.L.');
+      expect(result.anafData.name).toBe('QUALITEST S.R.L.');
     });
 
     it('should throw when ANAF returns no data', async () => {
@@ -100,7 +100,7 @@ describe('company.js', () => {
     });
 
     it('should throw when ANAF returns no company name', async () => {
-      mockFetch.mockResolvedValueOnce(anafCompanyResponse({ cui: 39814543, name: null }));
+      mockFetch.mockResolvedValueOnce(anafCompanyResponse({ cui: 50823992, name: null }));
 
       await expect(company.getCompanyData()).rejects.toThrow('ANAF returned no company name');
     });
@@ -111,8 +111,8 @@ describe('company.js', () => {
       validatedAt: new Date().toISOString(),
       anaf: QUALITEST_ANAF_RECORD,
       summary: {
-        company: 'QUALITEST DC RO S.R.L.',
-        cif: '39814543',
+        company: 'QUALITEST S.R.L.',
+        cif: '50823992',
         active: true
       }
     };
@@ -124,8 +124,8 @@ describe('company.js', () => {
     it('should use cached company data when available', async () => {
       const result = await company.getCompanyData();
 
-      expect(result.company).toBe('QUALITEST DC RO S.R.L.');
-      expect(result.cif).toBe('39814543');
+      expect(result.company).toBe('QUALITEST S.R.L.');
+      expect(result.cif).toBe('50823992');
       expect(result.active).toBe(true);
       expect(mockFetch).not.toHaveBeenCalled();
     });
@@ -143,13 +143,13 @@ describe('company.js', () => {
           { url: 'https://test.com/1', title: 'Job 1' },
           { url: 'https://test.com/2', title: 'Job 2' }
         ]))
-        .mockResolvedValueOnce(peviitorResponse([{ company: 'QUALITEST DC RO S.R.L.' }]));
+        .mockResolvedValueOnce(peviitorResponse([{ company: 'QUALITEST S.R.L.' }]));
 
       const result = await company.validateAndGetCompany();
 
       expect(result).toHaveProperty('status', 'active');
-      expect(result).toHaveProperty('company', 'QUALITEST DC RO S.R.L.');
-      expect(result).toHaveProperty('cif', '39814543');
+      expect(result).toHaveProperty('company', 'QUALITEST S.R.L.');
+      expect(result).toHaveProperty('cif', '50823992');
       expect(result).toHaveProperty('existingJobsCount');
       expect(typeof result.existingJobsCount).toBe('number');
     });

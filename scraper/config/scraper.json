@@ -1,4 +1,5 @@
 {
-  "apiBase": "https://apply.workable.com",
-  "apiAccount": "qualitest-1"
+  "apiBase": "https://careers.quality-ai.com",
+  "apiAccount": "quality-ai",
+  "searchQuery": "Bucharest"
 }

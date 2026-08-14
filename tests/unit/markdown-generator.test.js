@@ -1,18 +1,18 @@
 import { generateJobsMarkdown } from "../../scraper/markdown-generator.js";
 
 const baseCompany = {
-  id: "39814543",
-  company: "QUALITEST DC RO S.R.L.",
+  id: "50823992",
+  company: "QUALITEST S.R.L.",
   brand: "QUALITEST",
   status: "activ",
   location: ["București"],
   website: ["https://www.qualitestgroup.com"],
-  career: ["https://apply.workable.com/qualitest-1/"],
+  career: ["https://careers.quality-ai.com/"],
   lastScraped: "2026-06-17"
 };
 
 const baseJob = {
-  url: "https://apply.workable.com/qualitest-1//en/vacancy/123_en",
+  url: "https://careers.quality-ai.com/job/Bucharest-Senior-Embedded-Engineer/57481544/",
   title: "Senior Node.js Developer",
   workmode: "hybrid",
   location: ["București"],
@@ -24,12 +24,12 @@ describe("generateJobsMarkdown", () => {
   describe("company section", () => {
     it("includes company name as h1", () => {
       const md = generateJobsMarkdown(baseCompany, []);
-      expect(md).toContain("# QUALITEST DC RO S.R.L.");
+      expect(md).toContain("# QUALITEST S.R.L.");
     });
 
     it("includes CIF", () => {
       const md = generateJobsMarkdown(baseCompany, []);
-      expect(md).toContain("39814543");
+      expect(md).toContain("50823992");
     });
 
     it("includes brand", () => {
@@ -49,7 +49,7 @@ describe("generateJobsMarkdown", () => {
 
     it("includes career page as markdown link", () => {
       const md = generateJobsMarkdown(baseCompany, []);
-      expect(md).toContain("[https://apply.workable.com/qualitest-1/](https://apply.workable.com/qualitest-1/)");
+      expect(md).toContain("[https://careers.quality-ai.com/](https://careers.quality-ai.com/)");
     });
 
     it("includes lastScraped date", () => {
@@ -58,9 +58,9 @@ describe("generateJobsMarkdown", () => {
     });
 
     it("omits optional fields when not present", () => {
-      const minimal = { id: "39814543", company: "QUALITEST DC RO S.R.L." };
+      const minimal = { id: "50823992", company: "QUALITEST S.R.L." };
       const md = generateJobsMarkdown(minimal, []);
-      expect(md).toContain("# QUALITEST DC RO S.R.L.");
+      expect(md).toContain("# QUALITEST S.R.L.");
       expect(md).not.toContain("Brand");
       expect(md).not.toContain("Last Scraped");
     });
@@ -84,7 +84,7 @@ describe("generateJobsMarkdown", () => {
 
     it("includes job URL as markdown link", () => {
       const md = generateJobsMarkdown(baseCompany, [baseJob]);
-      expect(md).toContain("[https://apply.workable.com/qualitest-1//en/vacancy/123_en]");
+      expect(md).toContain("[https://careers.quality-ai.com/job/Bucharest-Senior-Embedded-Engineer/57481544/]");
     });
 
     it("includes workmode", () => {
@@ -108,7 +108,7 @@ describe("generateJobsMarkdown", () => {
     });
 
     it("renders multiple jobs", () => {
-      const job2 = { ...baseJob, title: "DevOps Engineer", url: "https://apply.workable.com/qualitest-1//en/vacancy/456_en" };
+      const job2 = { ...baseJob, title: "DevOps Engineer", url: "https://careers.quality-ai.com/job/Bucharest-Junior-Engineer/57481545/" };
       const md = generateJobsMarkdown(baseCompany, [baseJob, job2]);
       expect(md).toContain("### Senior Node.js Developer");
       expect(md).toContain("### DevOps Engineer");
@@ -116,7 +116,7 @@ describe("generateJobsMarkdown", () => {
     });
 
     it("handles job with no optional fields", () => {
-      const minimal = { url: "https://apply.workable.com/qualitest-1//en/vacancy/999_en", title: "QA Engineer" };
+      const minimal = { url: "https://careers.quality-ai.com/job/Bucharest-QA-Engineer/57481546/", title: "QA Engineer" };
       const md = generateJobsMarkdown(baseCompany, [minimal]);
       expect(md).toContain("### QA Engineer");
       expect(md).not.toContain("Work Mode");
