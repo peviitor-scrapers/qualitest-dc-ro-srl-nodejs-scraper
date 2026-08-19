@@ -10,15 +10,22 @@
 | Location | JUD. DOLJ, MUN. CRAIOVA, ALEEA 1 CASTANILOR, NR.2A, BL.65A1, SC.2, ET.1, AP.4 |
 | Website | [https://www.qualitest.com](https://www.qualitest.com) |
 | Careers | [https://careers.quality-ai.com/](https://careers.quality-ai.com/) |
-| Last Scraped | 2026-08-18 |
+| Last Scraped | 2026-08-19 |
 
-## Current Job Listings (25)
+## Current Job Listings (24)
 
-_Generated: 2026-08-18T06:41:02.504Z_
+_Generated: 2026-08-19T06:41:14.603Z_
 
 ### Senior Embedded Engineer
 
 - **URL:** [https://careers.quality-ai.com/job/Bucharest-Senior-Embedded-Engineer/57481544/](https://careers.quality-ai.com/job/Bucharest-Senior-Embedded-Engineer/57481544/)
+- **Work Mode:** on-site
+- **Location:** București
+- **Status:** scraped
+
+### Office Admin
+
+- **URL:** [https://careers.quality-ai.com/job/Bucharest-Office-Admin/56248144/](https://careers.quality-ai.com/job/Bucharest-Office-Admin/56248144/)
 - **Work Mode:** on-site
 - **Location:** București
 - **Status:** scraped
@@ -30,16 +37,9 @@ _Generated: 2026-08-18T06:41:02.504Z_
 - **Location:** București
 - **Status:** scraped
 
-### Senior C\# Fullstack Developer (hybrid)
+### Senior Frontend Developer
 
-- **URL:** [https://careers.quality-ai.com/job/Bucharest-Senior-C-Fullstack-Developer-%28hybrid%29/56085044/](https://careers.quality-ai.com/job/Bucharest-Senior-C-Fullstack-Developer-%28hybrid%29/56085044/)
-- **Work Mode:** hybrid
-- **Location:** București
-- **Status:** scraped
-
-### Office Admin
-
-- **URL:** [https://careers.quality-ai.com/job/Bucharest-Office-Admin/56248144/](https://careers.quality-ai.com/job/Bucharest-Office-Admin/56248144/)
+- **URL:** [https://careers.quality-ai.com/job/Bucharest-Senior-Frontend-Developer/56133744/](https://careers.quality-ai.com/job/Bucharest-Senior-Frontend-Developer/56133744/)
 - **Work Mode:** on-site
 - **Location:** București
 - **Status:** scraped
@@ -54,13 +54,6 @@ _Generated: 2026-08-18T06:41:02.504Z_
 ### Middle Embedded Engineer
 
 - **URL:** [https://careers.quality-ai.com/job/Bucharest-Middle-Embedded-Engineer/57181544/](https://careers.quality-ai.com/job/Bucharest-Middle-Embedded-Engineer/57181544/)
-- **Work Mode:** on-site
-- **Location:** București
-- **Status:** scraped
-
-### Senior Frontend Developer
-
-- **URL:** [https://careers.quality-ai.com/job/Bucharest-Senior-Frontend-Developer/56133744/](https://careers.quality-ai.com/job/Bucharest-Senior-Frontend-Developer/56133744/)
 - **Work Mode:** on-site
 - **Location:** București
 - **Status:** scraped
